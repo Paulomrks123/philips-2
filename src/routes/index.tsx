@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import appIcon from "@/assets/remote-192.png.asset.json";
 import {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Star, Power, Plus, Minus,
-  Undo2, MoreHorizontal, Menu as MenuIcon, Settings, VolumeX, X, Delete, Check, AlertTriangle,
+  Undo2, MoreHorizontal, VolumeX, X, Delete, Check, AlertTriangle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -22,23 +24,23 @@ export const Route = createFileRoute("/")({
 function Round({ children, label, size = "md", tone = "default", onClick }: {
   children: ReactNode; label: string; size?: "md" | "lg"; tone?: "default" | "power" | "star"; onClick: () => void;
 }) {
-  const s = size === "lg" ? "h-24 w-24" : "h-16 w-16";
+  const s = size === "lg" ? "remote-large" : "remote-medium";
   const t = tone === "power" ? "text-destructive" : tone === "star" ? "text-primary" : "text-foreground/80";
   return (
-    <button aria-label={label} onClick={onClick} className={`remote-btn ${s} ${t}`}>
+    <Button variant="remote" size="remote" aria-label={label} onClick={onClick} className={`remote-btn ${s} ${t}`}>
       {children}
-    </button>
+    </Button>
   );
 }
 
 function Rocker({ label, onUp, onDown, up, down }: { label: string; onUp: () => void; onDown: () => void; up: ReactNode; down: ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-2 text-foreground/90">
-      <button aria-label={`${label} +`} onClick={onUp} className="remote-ghost">{up}</button>
+      <Button variant="remote" size="remote" aria-label={`${label} +`} onClick={onUp} className="remote-ghost">{up}</Button>
       <span className="h-px w-6 bg-foreground/50" />
-      <span className="text-lg tracking-[0.2em]">{label}</span>
+      <span className="text-base">{label}</span>
       <span className="h-px w-6 bg-foreground/50" />
-      <button aria-label={`${label} -`} onClick={onDown} className="remote-ghost">{down}</button>
+      <Button variant="remote" size="remote" aria-label={`${label} -`} onClick={onDown} className="remote-ghost">{down}</Button>
     </div>
   );
 }
@@ -54,26 +56,25 @@ function Index() {
   };
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col bg-background">
-      <header className="bg-[image:var(--gradient-header)] px-4 pb-2 pt-4 text-primary-foreground">
-        <div className="flex items-center justify-between">
-          <MenuIcon className="h-6 w-6" />
-          <h1 className="text-xl font-semibold">Philips TV 26PFL3404</h1>
-          <Settings className="h-5 w-5" />
+    <div className="remote-app mx-auto flex max-w-md flex-col bg-background">
+      <header className="remote-header bg-[image:var(--gradient-header)] px-4 pb-2 text-primary-foreground">
+        <div className="flex items-center justify-center gap-2">
+          <img src={appIcon.url} width={32} height={32} alt="" className="size-8 shrink-0 rounded-md" />
+          <h1 className="text-lg font-semibold">Philips TV 26PFL3404</h1>
         </div>
-        <div className="mt-2 flex items-center justify-center gap-1 rounded-md bg-background/20 px-2 py-1 text-xs">
-          <AlertTriangle className="h-3.5 w-3.5" /> Protótipo visual — navegador não emite infravermelho
+        <div className="mt-2 flex items-center justify-center gap-1 rounded-md bg-background/20 px-2 py-1 text-center text-xs">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> Protótipo visual — sem transmissão infravermelha
         </div>
       </header>
 
-      <main className="relative flex flex-1 flex-col px-6 py-6">
-        <div className="grid grid-cols-3 items-start">
-          <div className="pt-4"><Rocker label="CH" onUp={() => press("CHANNEL_UP")} onDown={() => press("CHANNEL_DOWN")} up={<ChevronUp />} down={<ChevronDown />} /></div>
+      <main className="remote-main relative flex flex-1 flex-col">
+        <div className="remote-top grid grid-cols-3 items-start">
+          <div><Rocker label="CH" onUp={() => press("CHANNEL_UP")} onDown={() => press("CHANNEL_DOWN")} up={<ChevronUp />} down={<ChevronDown />} /></div>
           <div className="flex justify-center"><Round size="lg" tone="star" label="Favoritos" onClick={() => press("FAVORITES")}><Star className="h-10 w-10 fill-current" /></Round></div>
-          <div className="flex justify-end pt-24"><Round tone="power" label="Power" onClick={() => press("POWER")}><Power className="h-8 w-8" /></Round></div>
+          <div className="remote-power flex justify-end"><Round tone="power" label="Power" onClick={() => press("POWER")}><Power className="h-8 w-8" /></Round></div>
         </div>
 
-        <div className="mt-6 grid grid-cols-[1fr_auto] items-center gap-4">
+        <div className="remote-navigation grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
           <div className="dpad mx-auto">
             {([
               ["UP", "top-0 left-1/2 -translate-x-1/2", <ChevronUp key="u" />],
@@ -81,28 +82,28 @@ function Index() {
               ["LEFT", "left-0 top-1/2 -translate-y-1/2", <ChevronLeft key="l" />],
               ["RIGHT", "right-0 top-1/2 -translate-y-1/2", <ChevronRight key="r" />],
             ] as const).map(([c, pos, icon]) => (
-              <button key={c} aria-label={c} onClick={() => press(c)} className={`dpad-dir absolute ${pos}`}>{icon}</button>
+              <Button variant="remote" size="remote" key={c} aria-label={c} onClick={() => press(c)} className={`dpad-dir absolute ${pos}`}>{icon}</Button>
             ))}
-            <button aria-label="OK" onClick={() => press("OK")} className="dpad-ok">OK</button>
+            <Button variant="remote" size="remote" aria-label="OK" onClick={() => press("OK")} className="dpad-ok">OK</Button>
           </div>
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-2">
             <Rocker label="VOL" onUp={() => press("VOLUME_UP")} onDown={() => press("VOLUME_DOWN")} up={<Plus />} down={<Minus />} />
-            <button aria-label="Mute" onClick={() => press("MUTE")} className="remote-ghost"><VolumeX /></button>
+            <Button variant="remote" size="remote" aria-label="Mute" onClick={() => press("MUTE")} className="remote-ghost"><VolumeX /></Button>
           </div>
         </div>
 
-        <div className="mt-8 flex justify-center gap-12">
+        <div className="remote-menu flex justify-center gap-12">
           <Round label="Menu" onClick={() => press("MENU")}><span className="text-lg">Menu</span></Round>
           <Round label="Voltar" onClick={() => press("BACK")}><Undo2 /></Round>
         </div>
-        <div className="mt-6 flex justify-between">
+        <div className="remote-bottom flex justify-between">
           <Round label="Teclado numérico" onClick={() => setPad(true)}><span className="text-lg">123</span></Round>
           <Round label="Sair" onClick={() => press("EXIT")}><span className="text-lg">Sair</span></Round>
           <Round label="Mais opções" onClick={() => setMore(true)}><MoreHorizontal /></Round>
         </div>
 
-        <p aria-live="polite" className="mt-6 text-center text-xs text-muted-foreground">
-          {last ? `Comando ${last} — não transmitido (sem IR neste ambiente)` : "Toque em um botão"}
+        <p aria-live="polite" className="remote-feedback text-center text-xs text-muted-foreground">
+          {last ? `Comando ${last} — não transmitido (sem IR neste ambiente)` : "Nenhum comando transmitido"}
         </p>
       </main>
 
@@ -111,21 +112,21 @@ function Index() {
           <div className="sheet w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
               <span className="text-lg font-semibold">{pad ? (digits || "Canal") : "Funções"}</span>
-              <button aria-label="Fechar" onClick={() => { setPad(false); setMore(false); }} className="remote-ghost"><X /></button>
+              <Button variant="remote" size="remote" aria-label="Fechar" onClick={() => { setPad(false); setMore(false); }} className="remote-ghost"><X /></Button>
             </div>
             {pad ? (
               <div className="grid grid-cols-3 gap-3">
                 {["1","2","3","4","5","6","7","8","9"].map((d) => (
-                  <button key={d} onClick={() => { setDigits((v) => (v + d).slice(0, 3)); press(`NUM_${d}`); }} className="key">{d}</button>
+                  <Button variant="remote" size="remote" key={d} onClick={() => { setDigits((v) => (v + d).slice(0, 3)); press(`NUM_${d}`); }} className="key">{d}</Button>
                 ))}
-                <button aria-label="Apagar" onClick={() => setDigits((v) => v.slice(0, -1))} className="key"><Delete /></button>
-                <button onClick={() => { setDigits((v) => (v + "0").slice(0, 3)); press("NUM_0"); }} className="key">0</button>
-                <button aria-label="Confirmar" onClick={() => { press(`OK (${digits})`); setDigits(""); setPad(false); }} className="key text-primary"><Check /></button>
+                <Button variant="remote" size="remote" aria-label="Apagar" onClick={() => setDigits((v) => v.slice(0, -1))} className="key"><Delete /></Button>
+                <Button variant="remote" size="remote" onClick={() => { setDigits((v) => (v + "0").slice(0, 3)); press("NUM_0"); }} className="key">0</Button>
+                <Button variant="remote" size="remote" aria-label="Confirmar" onClick={() => { press(`OK (${digits})`); setDigits(""); setPad(false); }} className="key text-primary"><Check /></Button>
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-3">
                 {["SOURCE","TV","AV","HDMI","INFO","GUIDE","IMAGEM","SOM","SLEEP"].map((c) => (
-                  <button key={c} onClick={() => press(c)} className="key text-sm">{c}</button>
+                  <Button variant="remote" size="remote" key={c} onClick={() => press(c)} className="key text-sm">{c}</Button>
                 ))}
               </div>
             )}
