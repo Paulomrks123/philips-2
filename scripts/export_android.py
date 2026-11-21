@@ -570,7 +570,7 @@ TRANSMIT_IR é uma permissão normal, não exige diálogo em tempo de execução
 ## Configurar somente após confirmar
 O arquivo `app/src/main/java/com/philipsremote/ir/IrCore.kt` mantém `PhilipsProfile.signals` vazio.
 Cada entrada futura exige modelo exato, referência documentada, confirmação no aparelho, frequência medida em Hz e durações ON/OFF positivas em microssegundos (iniciando ON), total inferior a 2 segundos por quadro.
-Registre também o sufixo completo da TV, o controle original e a metodologia na evidência `source` antes de confirmar compatibilidade. O alvo base é 26PFL3404; nenhum sufixo regional foi presumido.
+A documentação oficial Philips para 26PFL3404/78 identifica o controle como tipo PF01L09B. Isso identifica o controle de referência, mas não fornece os pulsos IR nem confirma todos os códigos. Registre o sufixo completo da TV, o controle original e a metodologia na evidência `source` antes de confirmar compatibilidade. O alvo base é 26PFL3404; nenhum sufixo regional foi presumido.
 `frames` aceita quadros alternados quando capturas verificadas exigirem toggle RC5/RC6; a alternância só avança após sucesso da API. Não há codificador inventado, varredura de códigos nem repetição automática por toque longo.
 Os números sintéticos dos testes não são códigos Philips e nunca entram no perfil do aplicativo.
 
