@@ -36,6 +36,19 @@ jobs:
       - name: Generate Android Studio project
         run: python scripts/export_android.py
 
+      - name: Package Android Studio source
+        run: |
+          cd /tmp/philips-native
+          zip -qr "$GITHUB_WORKSPACE/philips-remote-android-source.zip" PhilipsRemote
+
+      - name: Upload Android Studio source
+        uses: actions/upload-artifact@v4
+        with:
+          name: philips-remote-android-source
+          path: philips-remote-android-source.zip
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
