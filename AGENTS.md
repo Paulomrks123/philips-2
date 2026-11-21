@@ -28,3 +28,6 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Keep PWA support manifest-only with a single client-side lifecycle hook for installation, display mode and connectivity; offline caching was not requested.
+- Use the shared Button remote variant for remote controls so accessible focus behavior and sizing stay consistent across mobile layouts.
