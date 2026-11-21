@@ -178,6 +178,9 @@
   .key:active { transform:scale(.94); background:var(--accent); }
 }
 .remote-header { padding-top:max(.75rem,env(safe-area-inset-top)); }
+.remote-btn, .dpad-dir, .dpad-ok { border-radius:9999px; }
+.dpad-dir, .dpad-ok { color:var(--pad-foreground); }
+.dpad-ok { font-size:1.4rem; }
 .remote-app { min-height:calc(100svh - 72px); }
 .remote-main { padding:1.25rem 1.5rem .75rem; }
 .remote-large { width:88px; height:88px; }
