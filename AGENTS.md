@@ -33,3 +33,4 @@ use the editor.
 - Use the shared Button remote variant for remote controls so accessible focus behavior and sizing stay consistent across mobile layouts.
 - Deliver native Android work as a separate Android Studio source archive, not as a replacement for the TanStack app; this environment previews web apps only.
 - Keep native IR profiles unconfigured until model-specific evidence is supplied, and separate platform-free validation from the Android transmitter so unsafe commands remain blocked and testable.
+- Preserve the Android export source in a project generator and stage generated files in /tmp for inspection before delivery; temporary packaging directories do not survive sandbox restarts.
