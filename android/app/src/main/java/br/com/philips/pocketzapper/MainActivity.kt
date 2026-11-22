@@ -5,6 +5,7 @@ import android.content.Context
 import android.hardware.ConsumerIrManager
 import android.net.Uri
 import android.os.Bundle
+import android.view.KeyEvent
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -55,6 +56,18 @@ class MainActivity : Activity() {
         }
         setContentView(webView)
         webView.loadUrl(APP_URL)
+    }
+
+    // Physical volume keys work while this Android companion is in the foreground.
+    // Android does not let a background app intercept keys owned by Chrome.
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_VOLUME_UP -> { IrBridge().send("VOLUME_UP"); return true }
+                KeyEvent.KEYCODE_VOLUME_DOWN -> { IrBridge().send("VOLUME_DOWN"); return true }
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onDestroy() {
@@ -111,7 +124,7 @@ class MainActivity : Activity() {
                     if (split > 0) headers[line.substring(0, split).trim().lowercase()] = line.substring(split + 1).trim()
                 }
                 if (headers["origin"] != "https://philips-pocket-zapper.lovable.app") {
-                    val denied = "HTTP/1.1 403 Forbidden\\r\\nContent-Length: 0\\r\\nConnection: close\\r\\n\\r\\n"
+                    val denied = "HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
                     client.getOutputStream().use { it.write(denied.toByteArray(StandardCharsets.US_ASCII)) }
                     return
                 }
