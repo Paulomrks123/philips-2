@@ -181,15 +181,18 @@ class MainActivity : Activity() {
         fun getStatus(): String {
             val manager = ir
             val available = manager?.hasIrEmitter() == true
+            val host = tvHost
+            val connected = host != null && probeTv(host)
+            if (!connected) tvHost = null
             return JSONObject()
                 .put("available", available)
                 .put("profile", MODEL)
                 .put("profileConfigured", commands.isNotEmpty())
-                .put("networkConnected", tvHost != null)
+                .put("networkConnected", connected)
                 .put("message", when {
-                    tvHost != null -> "TV conectada pela rede Wi-Fi."
-                    available -> "Emissor IR detectado. Sincronize pela rede ou aguarde códigos IR validados."
-                    else -> "Conecte o celular e a TV à mesma rede Wi-Fi para sincronizar."
+                    connected -> "TV acessível pela rede Wi-Fi. Reconexão automática ativa."
+                    available -> "TV ainda não respondeu. O aplicativo continuará tentando reconectar."
+                    else -> "Aguardando TV na mesma rede Wi-Fi. Reconexão automática ativa."
                 }).toString()
         }
 
@@ -262,9 +265,9 @@ class MainActivity : Activity() {
                     else result(false, "Para ligar a TV em standby, informe o MAC da TV e ative Wake-on-LAN nas configurações dela.")
                 }
                 val state = readPowerState(host)
-                if (state == "standby" || state == "off") {
+                if (state != "on") {
                     return if (!mac.isNullOrBlank()) wakeOnLan(mac, host)
-                    else result(false, "A TV está em standby. Informe o MAC e ative Wake-on-LAN para ligá-la pela rede.")
+                    else result(false, "Não consegui confirmar que a TV está ligada. Informe o MAC e ative Wake-on-LAN para despertá-la pela rede.")
                 }
             }
             val networkKey = networkKey(normalized)
@@ -304,6 +307,18 @@ class MainActivity : Activity() {
             } catch (e: Exception) {
                 result(false, "Falha na transmissão IR: ${e.message ?: "erro desconhecido"}")
             }
+        }
+
+        private fun probeTv(host: String): Boolean {
+            var connection: HttpURLConnection? = null
+            return try {
+                connection = URL("http://" + host + ":1925/" + tvApiVersion + "/system").openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 1800
+                connection.readTimeout = 1800
+                connection.responseCode == HttpURLConnection.HTTP_OK
+            } catch (_: Exception) { false }
+            finally { connection?.disconnect() }
         }
 
         private fun readPowerState(host: String): String? {
