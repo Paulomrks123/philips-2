@@ -110,6 +110,11 @@ class MainActivity : Activity() {
                     val split = line.indexOf(":")
                     if (split > 0) headers[line.substring(0, split).trim().lowercase()] = line.substring(split + 1).trim()
                 }
+                if (headers["origin"] != "https://philips-pocket-zapper.lovable.app") {
+                    val denied = "HTTP/1.1 403 Forbidden\\r\\nContent-Length: 0\\r\\nConnection: close\\r\\n\\r\\n"
+                    client.getOutputStream().use { it.write(denied.toByteArray(StandardCharsets.US_ASCII)) }
+                    return
+                }
                 val length = (headers["content-length"] ?: "0").toIntOrNull()?.coerceIn(0, 8192) ?: 0
                 val bodyBytes = ByteArray(length)
                 var offset = 0
