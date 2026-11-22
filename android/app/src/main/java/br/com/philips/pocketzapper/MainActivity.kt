@@ -359,8 +359,8 @@ class MainActivity : Activity() {
             val ranges = manager?.carrierFrequencies ?: return null
             val pairs = ranges.toList().chunked(2).filter { it.size == 2 }
             return when {
-                pairs.any { 36000 in it[0]..it[1] } -> 36000
-                pairs.any { 38000 in it[0]..it[1] } -> 38000
+                pairs.any { 36000.0 in it[0]..it[1] } -> 36000
+                pairs.any { 38000.0 in it[0]..it[1] } -> 38000
                 else -> null
             }
         }
