@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import appIcon from "@/assets/remote-192.png.asset.json";
 import {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Star, Power, Plus, Minus,
-  Undo2, MoreHorizontal, VolumeX, X, Delete, Check, AlertTriangle,
+  Undo2, MoreHorizontal, VolumeX, X, Delete, Check, AlertTriangle, Wifi,
 } from "lucide-react";
 
 declare global {
@@ -12,11 +12,12 @@ declare global {
     PhilipsIR?: {
       getStatus: () => string;
       send: (command: string) => string;
+      connectNetwork: (ip: string) => string;
     };
   }
 }
 
-type IrStatus = { available: boolean; profileConfigured: boolean; supports36kHz?: boolean; carrierRangesHz?: number[][]; message: string };
+type IrStatus = { available: boolean; profileConfigured: boolean; supports36kHz?: boolean; networkConnected?: boolean; carrierRangesHz?: number[][]; message: string };
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -62,6 +63,8 @@ function Index() {
   const [more, setMore] = useState(false);
   const [digits, setDigits] = useState("");
   const [irStatus, setIrStatus] = useState<IrStatus | null>(null);
+  const [tvIp, setTvIp] = useState("");
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const readStatus = () => {
@@ -71,6 +74,22 @@ function Index() {
     };
     readStatus();
   }, []);
+
+  const syncTv = () => {
+    if (!window.PhilipsIR) {
+      setSyncStatus("A sincronização Wi-Fi exige a versão Android instalada, não o navegador.");
+      return;
+    }
+    try {
+      const response = JSON.parse(window.PhilipsIR.connectNetwork(tvIp)) as { ok: boolean; message: string };
+      setSyncStatus(response.message);
+      if (response.ok) {
+        setIrStatus((previous) => previous ? { ...previous, networkConnected: true, message: "TV conectada pela rede Wi-Fi." } : previous);
+      }
+    } catch {
+      setSyncStatus("Não foi possível iniciar a sincronização. Confira o IP da TV.");
+    }
+  };
 
   const press = (c: string) => {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate?.(15);
@@ -96,6 +115,20 @@ function Index() {
         <div className="mt-2 flex items-center justify-center gap-1 rounded-md bg-background/20 px-2 py-1 text-center text-xs">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {irStatus ? irStatus.message : "Modo web: sem acesso direto ao infravermelho"}
         </div>
+        <div className="mt-3 flex gap-2">
+          <input
+            aria-label="Endereço IP da TV"
+            value={tvIp}
+            onChange={(event) => setTvIp(event.target.value)}
+            placeholder="IP da TV (ex.: 192.168.1.50)"
+            inputMode="decimal"
+            className="min-w-0 flex-1 rounded-lg border border-primary-foreground/30 bg-background/15 px-3 py-2 text-sm text-primary-foreground placeholder:text-primary-foreground/65 outline-none focus:ring-2 focus:ring-primary-foreground/50"
+          />
+          <Button variant="secondary" onClick={syncTv} className="shrink-0 gap-2">
+            <Wifi className="h-4 w-4" /> Sincronizar
+          </Button>
+        </div>
+        {syncStatus && <p role="status" className="mt-2 text-center text-xs text-primary-foreground">{syncStatus}</p>}
       </header>
 
       <main className="remote-main relative flex flex-1 flex-col">
