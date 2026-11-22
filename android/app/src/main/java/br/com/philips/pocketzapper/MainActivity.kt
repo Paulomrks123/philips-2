@@ -14,7 +14,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class MainActivity : Activity() {
-    // Intentionally empty until pulse patterns are verified for Philips 50PUG6654/78.
+    // Intentionally empty until pulse patterns are verified for Philips 26PFL3404.
     private val commands = emptyMap<String, IntArray>()
     private var ir: ConsumerIrManager? = null
     private lateinit var webView: WebView
@@ -59,7 +59,9 @@ class MainActivity : Activity() {
                 if (range.size == 2) rangeJson.put(JSONArray().put(range[0]).put(range[1]))
             }
             val supports36kHz = ranges.chunked(2).any { range ->
-                range.size == 2 && 36000.0 in range[0]..range[1]
+                range.size == 2 &&
+                    36000.0 >= range[0].toDouble() &&
+                    36000.0 <= range[1].toDouble()
             }
             return JSONObject()
                 .put("available", available)
@@ -101,6 +103,6 @@ class MainActivity : Activity() {
     companion object {
         private const val APP_URL = "https://philips-pocket-zapper.lovable.app"
         private const val APP_HOST = "philips-pocket-zapper.lovable.app"
-        private const val MODEL = "Philips 50PUG6654/78"
+        private const val MODEL = "Philips 26PFL3404"
     }
 }
