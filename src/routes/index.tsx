@@ -63,7 +63,7 @@ function Index() {
   const [more, setMore] = useState(false);
   const [digits, setDigits] = useState("");
   const [irStatus, setIrStatus] = useState<IrStatus | null>(null);
-  const [tvIp, setTvIp] = useState("");
+  const [tvIp, setTvIp] = useState("192.168.1.2");
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -120,7 +120,7 @@ function Index() {
             aria-label="Endereço IP da TV"
             value={tvIp}
             onChange={(event) => setTvIp(event.target.value)}
-            placeholder="IP da TV (ex.: 192.168.1.50)"
+            placeholder="IP da TV (192.168.1.2)"
             inputMode="decimal"
             className="min-w-0 flex-1 rounded-lg border border-primary-foreground/30 bg-background/15 px-3 py-2 text-sm text-primary-foreground placeholder:text-primary-foreground/65 outline-none focus:ring-2 focus:ring-primary-foreground/50"
           />
