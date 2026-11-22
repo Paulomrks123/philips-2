@@ -1,7 +1,9 @@
 package br.com.philips.pocketzapper
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
 import android.hardware.ConsumerIrManager
 import android.net.Uri
 import android.os.Bundle
@@ -78,6 +80,61 @@ class MainActivity : Activity() {
         }
         setContentView(webView)
         webView.loadUrl(APP_URL)
+        checkForAppUpdates()
+    }
+
+    private fun checkForAppUpdates() {
+        Thread({
+            var connection: HttpURLConnection? = null
+            try {
+                connection = URL("https://api.github.com/repos/Paulomrks123/philips-pocket-zapper/releases/latest")
+                    .openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                connection.setRequestProperty("Accept", "application/vnd.github+json")
+                connection.setRequestProperty("User-Agent", "Philips-Pocket-Zapper-Android")
+                if (connection.responseCode !in 200..299) return@Thread
+                val release = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                val tag = release.optString("tag_name")
+                val latestCode = Regex("""v?(\\d+)""").matchEntire(tag)
+                    ?.groupValues?.getOrNull(1)?.toIntOrNull() ?: return@Thread
+                val currentCode = packageManager.getPackageInfo(packageName, 0).versionCode
+                if (latestCode <= currentCode) return@Thread
+                val assets = release.optJSONArray("assets") ?: return@Thread
+                var apkUrl: String? = null
+                for (index in 0 until assets.length()) {
+                    val asset = assets.optJSONObject(index) ?: continue
+                    if (asset.optString("name").endsWith(".apk", ignoreCase = true)) {
+                        apkUrl = asset.optString("browser_download_url").takeIf { it.startsWith("https://") }
+                        break
+                    }
+                }
+                val downloadUrl = apkUrl ?: release.optString("html_url").takeIf { it.startsWith("https://") }
+                    ?: return@Thread
+                runOnUiThread {
+                    AlertDialog.Builder(this)
+                        .setTitle("Atualização disponível")
+                        .setMessage("A versão $tag do Philips Pocket Zapper está disponível. Deseja abrir o download?")
+                        .setNegativeButton("Depois", null)
+                        .setPositiveButton("Baixar atualização") { _, _ ->
+                            try {
+                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl)))
+                            } catch (_: Exception) {
+                                AlertDialog.Builder(this)
+                                    .setMessage("Não foi possível abrir o download. Acesse a página de versões do projeto no GitHub.")
+                                    .setPositiveButton("OK", null)
+                                    .show()
+                            }
+                        }
+                        .show()
+                }
+            } catch (_: Exception) {
+                // Update checks are optional; the remote control remains available offline.
+            } finally {
+                connection?.disconnect()
+            }
+        }, "philips-app-update-check").start()
     }
 
     // Physical volume keys work while this Android companion is in the foreground.
@@ -199,10 +256,8 @@ class MainActivity : Activity() {
             val manager = ir
             val available = manager?.hasIrEmitter() == true
             val carrierRanges = if (available) manager?.carrierFrequencies else null
-            val supports36kHz = carrierRanges?.let { ranges ->
-                ranges.toList().chunked(2).any { pair ->
-                    pair.size == 2 && pair[0] <= 36000 && 36000 <= pair[1]
-                }
+            val supports36kHz = carrierRanges?.any { range ->
+                range.minFrequency <= 36000 && 36000 <= range.maxFrequency
             } ?: false
             // Some Android IR blasters expose 38 kHz instead of exactly 36 kHz.
             val rc6Carrier = supportedRc6Carrier(manager)
@@ -216,8 +271,8 @@ class MainActivity : Activity() {
                 .put("supportsRc6Carrier", rc6Carrier != null)
                 .put("rc6CarrierHz", rc6Carrier ?: 0)
                 .put("carrierRangesHz", org.json.JSONArray().also { array ->
-                    carrierRanges?.toList()?.chunked(2)?.forEach { pair ->
-                        if (pair.size == 2) array.put(org.json.JSONArray().put(pair[0]).put(pair[1]))
+                    carrierRanges?.forEach { range ->
+                        array.put(org.json.JSONArray().put(range.minFrequency).put(range.maxFrequency))
                     }
                 })
                 .put("transport", when {
@@ -359,10 +414,9 @@ class MainActivity : Activity() {
 
         private fun supportedRc6Carrier(manager: ConsumerIrManager?): Int? {
             val ranges = manager?.carrierFrequencies ?: return null
-            val pairs = ranges.toList().chunked(2).filter { it.size == 2 }
             return when {
-                pairs.any { it[0] <= 36000 && 36000 <= it[1] } -> 36000
-                pairs.any { it[0] <= 38000 && 38000 <= it[1] } -> 38000
+                ranges.any { it.minFrequency <= 36000 && 36000 <= it.maxFrequency } -> 36000
+                ranges.any { it.minFrequency <= 38000 && 38000 <= it.maxFrequency } -> 38000
                 else -> null
             }
         }
