@@ -97,7 +97,7 @@ class MainActivity : Activity() {
                 if (connection.responseCode !in 200..299) return@Thread
                 val release = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
                 val tag = release.optString("tag_name")
-                val latestCode = Regex("""v?(\\d+)""").matchEntire(tag)
+                val latestCode = Regex("""v?(\d+)""").matchEntire(tag)
                     ?.groupValues?.getOrNull(1)?.toIntOrNull() ?: return@Thread
                 val currentCode = packageManager.getPackageInfo(packageName, 0).versionCode
                 if (latestCode <= currentCode) return@Thread
