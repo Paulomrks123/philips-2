@@ -84,9 +84,12 @@ class MainActivity : Activity() {
             val pattern = commands[command.uppercase()]
                 ?: return result(false, "Comando sem código validado para $MODEL.")
             val carrierHz = 36000
-            val supportsCarrier = manager.carrierFrequencies?.any {
-                carrierHz.toDouble() >= it.minFrequency && carrierHz.toDouble() <= it.maxFrequency
-            } == true
+            val supportsCarrier = manager.carrierFrequencies
+                ?.toList()
+                ?.chunked(2)
+                ?.any { range ->
+                    range.size == 2 && carrierHz >= range[0] && carrierHz <= range[1]
+                } == true
             if (!supportsCarrier) return result(false, "Frequência de 36 kHz não suportada pelo aparelho.")
             return try {
                 manager.transmit(carrierHz, pattern)
