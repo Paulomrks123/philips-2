@@ -35,7 +35,7 @@ class MainActivity : Activity() {
             val available = manager?.hasIrEmitter() == true
             return JSONObject()
                 .put("available", available)
-                .put("profile", "Philips 26PFL3404")
+                .put("profile", "Philips 50PUG6654/78")
                 .put("profileConfigured", commands.isNotEmpty())
                 .put("message", when {
                     !available -> "Este celular não disponibiliza emissor infravermelho pela API Android."
@@ -49,7 +49,7 @@ class MainActivity : Activity() {
             val manager = ir ?: return result(false, "API infravermelha indisponível.")
             if (!manager.hasIrEmitter()) return result(false, "Este aparelho não possui emissor IR compatível.")
             val pattern = commands[command.uppercase()]
-                ?: return result(false, "Comando sem código validado para Philips 26PFL3404.")
+                ?: return result(false, "Comando sem código validado para Philips 50PUG6654/78.")
             val carrier = 36000
             val ranges = manager.carrierFrequencies?.toList()?.chunked(2).orEmpty()
             val supportsCarrier = ranges.any { range ->
