@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - "android/**"
+      - "src/routes/index.tsx"
       - ".github/workflows/android-apk.yml"
 
 jobs:
