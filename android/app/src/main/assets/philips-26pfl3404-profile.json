@@ -1,0 +1,9 @@
+{
+  "model": "Philips 26PFL3404",
+  "remoteControlType": "PF01L09B",
+  "carrierHz": null,
+  "protocol": null,
+  "verified": false,
+  "commands": {},
+  "note": "Intencionalmente vazio: inserir apenas padrões IR validados para este modelo."
+}
