@@ -6,6 +6,7 @@ on:
     paths:
       - "android/**"
       - "src/routes/index.tsx"
+      - "src/styles.css"
       - ".github/workflows/android-apk.yml"
 
 jobs:
