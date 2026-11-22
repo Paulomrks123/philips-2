@@ -195,19 +195,41 @@ class MainActivity : Activity() {
         fun getStatus(): String {
             val manager = ir
             val available = manager?.hasIrEmitter() == true
+            val carrierRanges = if (available) manager?.carrierFrequencies else null
+            val supports36kHz = carrierRanges?.let { ranges ->
+                ranges.toList().chunked(2).any { pair ->
+                    pair.size == 2 && 36000 in pair[0]..pair[1]
+                }
+            } ?: false
             val host = tvHost
             val connected = host != null && probeTv(host)
             if (!connected) tvHost = null
             return JSONObject()
                 .put("available", available)
+                .put("irAvailable", available)
+                .put("supports36kHz", supports36kHz)
+                .put("carrierRangesHz", org.json.JSONArray().also { array ->
+                    carrierRanges?.toList()?.chunked(2)?.forEach { pair ->
+                        if (pair.size == 2) array.put(org.json.JSONArray().put(pair[0]).put(pair[1]))
+                    }
+                })
+                .put("transport", when {
+                    available && supports36kHz -> "infrared"
+                    connected -> "wifi"
+                    else -> "waiting"
+                })
+                .put("manufacturer", android.os.Build.MANUFACTURER)
+                .put("deviceModel", android.os.Build.MODEL)
                 .put("profile", MODEL)
                 .put("profileConfigured", commands.isNotEmpty())
-                .put("protocol", "Philips RC6 mode 0 / 36 kHz")
+                .put("protocol", "Philips RC6 mode 0 / 36 kHz (perfil atual)")
                 .put("networkConnected", connected)
                 .put("message", when {
-                    available -> "Infravermelho Philips RC6 disponível. Aponte a parte superior do celular para o sensor da TV."
-                    connected -> "TV acessível pela rede Wi-Fi. Infravermelho indisponível neste celular."
-                    else -> "Aguardando TV na rede. O controle IR funciona sem sincronização Wi-Fi quando o celular tem emissor."
+                    available && supports36kHz -> "Emissor infravermelho detectado e compatível com 36 kHz. Controle IR disponível."
+                    available -> "Este celular tem infravermelho, mas não confirmou suporte a 36 kHz. O aplicativo tentará usar Wi-Fi."
+                    connected -> "TV acessível pela rede Wi-Fi. Controle automático por Wi-Fi neste aparelho."
+                    available.not() -> "Este celular não tem emissor infravermelho. Use o controle pela rede Wi-Fi."
+                    else -> "Aguardando conexão com a TV pela rede Wi-Fi."
                 }).toString()
         }
 
@@ -273,22 +295,30 @@ class MainActivity : Activity() {
                     } catch (_: Exception) { }
                 }
             }
+            // Use IR first whenever the hardware supports the carrier: this also works
+            // when the TV is in standby and its Wi-Fi API is unavailable.
+            val manager = ir
+            val hasIr = manager?.hasIrEmitter() == true
+            val supports36kHz = if (hasIr) {
+                manager?.carrierFrequencies?.toList()?.chunked(2)?.any { pair ->
+                    pair.size == 2 && 36000 in pair[0]..pair[1]
+                } == true
+            } else false
+            if (hasIr && supports36kHz) {
+                return transmitPhilipsRc6(manager!!, normalized)
+            }
+
             if (normalized == "POWER") {
                 val mac = prefs.getString("tv_mac", null)
                 if (host == null) {
                     return if (!mac.isNullOrBlank()) wakeOnLan(mac, prefs.getString("tv_ip", null))
-                    else result(false, "Para ligar a TV em standby, informe o MAC da TV e ative Wake-on-LAN nas configurações dela.")
+                    else result(false, "TV fora da rede. Para ligar em standby por Wi-Fi, informe o MAC e habilite Wake-on-LAN; se possível, use um celular com IR.")
                 }
                 val state = readPowerState(host)
                 if (state != "on") {
                     return if (!mac.isNullOrBlank()) wakeOnLan(mac, host)
-                    else result(false, "Não consegui confirmar que a TV está ligada. Informe o MAC e ative Wake-on-LAN para despertá-la pela rede.")
+                    else result(false, "A TV não confirmou estado ligado. Para despertá-la por Wi-Fi, informe o MAC e habilite Wake-on-LAN.")
                 }
-            }
-            // Prefer direct IR so power-on works even when the TV is in network standby.
-            val manager = ir
-            if (manager?.hasIrEmitter() == true) {
-                return transmitPhilipsRc6(manager, normalized)
             }
 
             val networkKey = networkKey(normalized)
@@ -318,7 +348,7 @@ class MainActivity : Activity() {
                 }
             }
 
-            return result(false, "Este celular não possui emissor infravermelho. Use a conexão Wi-Fi ou um celular com IR.")
+            return result(false, if (hasIr) "O emissor IR deste celular não suporta 36 kHz. Conecte a TV pela rede Wi-Fi." else "Este celular não possui emissor infravermelho. Conecte a TV pela rede Wi-Fi ou use um transmissor IR externo compatível.")
         }
 
         private fun transmitPhilipsRc6(manager: ConsumerIrManager, command: String): String {
