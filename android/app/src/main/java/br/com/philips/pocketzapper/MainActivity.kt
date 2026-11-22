@@ -13,6 +13,12 @@ import android.webkit.WebViewClient
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.ServerSocket
+import java.net.InetAddress
+import java.net.Socket
+import java.io.InputStream
+import java.io.OutputStream
+import java.nio.charset.StandardCharsets
 
 class MainActivity : Activity() {
     // IR pulse patterns remain empty until verified for this exact TV model.
@@ -21,10 +27,13 @@ class MainActivity : Activity() {
     private var tvHost: String? = null
     private var tvApiVersion: Int = 6
     private lateinit var webView: WebView
+    @Volatile private var localServer: ServerSocket? = null
+    @Volatile private var serverRunning = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ir = getSystemService(Context.CONSUMER_IR_SERVICE) as? ConsumerIrManager
+        startLocalBridgeServer()
 
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
@@ -46,6 +55,99 @@ class MainActivity : Activity() {
         }
         setContentView(webView)
         webView.loadUrl(APP_URL)
+    }
+
+    override fun onDestroy() {
+        serverRunning = false
+        try { localServer?.close() } catch (_: Exception) { }
+        localServer = null
+        super.onDestroy()
+    }
+
+    // Local companion bridge for the PWA opened separately in Chrome.
+    private fun startLocalBridgeServer() {
+        if (serverRunning) return
+        serverRunning = true
+        Thread({
+            try {
+                val server = ServerSocket(8765, 20, InetAddress.getByName("127.0.0.1"))
+                localServer = server
+                while (serverRunning) {
+                    val client = try { server.accept() } catch (_: Exception) { break }
+                    Thread({ handleLocalRequest(client) }, "philips-local-client").start()
+                }
+            } catch (_: Exception) {
+                serverRunning = false
+            }
+        }, "philips-local-bridge").start()
+    }
+
+    private fun readHttpLine(input: InputStream): String? {
+        val bytes = java.io.ByteArrayOutputStream()
+        while (true) {
+            val value = input.read()
+            if (value == -1) return if (bytes.size() == 0) null else bytes.toString("UTF-8")
+            if (value == 10) break
+            if (value != 13) bytes.write(value)
+            if (bytes.size() > 8192) return null
+        }
+        return bytes.toString("UTF-8")
+    }
+
+    private fun handleLocalRequest(socket: Socket) {
+        socket.use { client ->
+            try {
+                client.soTimeout = 5000
+                val input = client.getInputStream()
+                val request = readHttpLine(input) ?: return
+                val parts = request.split(" ")
+                val method = parts.getOrNull(0) ?: ""
+                val path = parts.getOrNull(1)?.substringBefore("?") ?: ""
+                val headers = mutableMapOf<String, String>()
+                while (true) {
+                    val line = readHttpLine(input) ?: break
+                    if (line.isEmpty()) break
+                    val split = line.indexOf(":")
+                    if (split > 0) headers[line.substring(0, split).trim().lowercase()] = line.substring(split + 1).trim()
+                }
+                val length = (headers["content-length"] ?: "0").toIntOrNull()?.coerceIn(0, 8192) ?: 0
+                val bodyBytes = ByteArray(length)
+                var offset = 0
+                while (offset < length) {
+                    val count = input.read(bodyBytes, offset, length - offset)
+                    if (count <= 0) break
+                    offset += count
+                }
+                val body = String(bodyBytes, 0, offset, StandardCharsets.UTF_8)
+                val validPath = path in listOf("/status", "/connect", "/send")
+                val result = when {
+                    method == "OPTIONS" -> ""
+                    method == "GET" && path == "/status" -> IrBridge().getStatus()
+                    method == "POST" && path == "/connect" -> IrBridge().connectNetwork(JSONObject(body).optString("ip"))
+                    method == "POST" && path == "/send" -> IrBridge().send(JSONObject(body).optString("command"))
+                    else -> JSONObject().put("ok", false).put("message", "Endpoint local desconhecido.").toString()
+                }
+                val status = when {
+                    method == "OPTIONS" -> "204 No Content"
+                    validPath -> "200 OK"
+                    else -> "404 Not Found"
+                }
+                val bytes = result.toByteArray(StandardCharsets.UTF_8)
+                val output: OutputStream = client.getOutputStream()
+                val responseHeaders = "HTTP/1.1 $status\r\n" +
+                    "Access-Control-Allow-Origin: https://philips-pocket-zapper.lovable.app\r\n" +
+                    "Vary: Origin\r\n" +
+                    "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n" +
+                    "Access-Control-Allow-Headers: Content-Type\r\n" +
+                    "Access-Control-Allow-Private-Network: true\r\n" +
+                    "Content-Type: application/json; charset=utf-8\r\n" +
+                    "Content-Length: " + (if (method == "OPTIONS") 0 else bytes.size) + "\r\n" +
+                    "Connection: close\r\n\r\n"
+                output.write(responseHeaders.toByteArray(StandardCharsets.US_ASCII))
+                if (method != "OPTIONS") output.write(bytes)
+                output.flush()
+            } catch (_: Exception) { }
+        }
     }
 
     private fun isTrustedUrl(uri: Uri): Boolean =
