@@ -24,8 +24,22 @@ import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 
 class MainActivity : Activity() {
-    // IR pulse patterns remain empty until verified for this exact TV model.
-    private val commands = emptyMap<String, IntArray>()
+    // Philips TV RC6 mode 0, custom/address 0x00, 36 kHz.
+    // Key values follow Philips RC6 command tables for this TV family.
+    private val commands = mapOf(
+        "POWER" to 0x0C, "MUTE" to 0x0D, "INFO" to 0x0F,
+        "VOLUME_UP" to 0x10, "VOLUME_DOWN" to 0x11,
+        "CHANNEL_UP" to 0x20, "CHANNEL_DOWN" to 0x21,
+        "SOURCE" to 0x38, "AV" to 0x38, "HDMI" to 0x38,
+        "MENU" to 0x54, "UP" to 0x58, "DOWN" to 0x59,
+        "LEFT" to 0x5A, "RIGHT" to 0x5B, "OK" to 0x5C,
+        "BACK" to 0x41, "EXIT" to 0x41, "TV" to 0x54,
+        "FAVORITES" to 0x3B, "GUIDE" to 0xCC,
+        "NUM_0" to 0x00, "NUM_1" to 0x01, "NUM_2" to 0x02,
+        "NUM_3" to 0x03, "NUM_4" to 0x04, "NUM_5" to 0x05,
+        "NUM_6" to 0x06, "NUM_7" to 0x07, "NUM_8" to 0x08, "NUM_9" to 0x09
+    )
+    @Volatile private var rc6Toggle = false
     private var ir: ConsumerIrManager? = null
     @Volatile private var tvHost: String? = null
     @Volatile private var tvApiVersion: Int = 6
@@ -188,11 +202,12 @@ class MainActivity : Activity() {
                 .put("available", available)
                 .put("profile", MODEL)
                 .put("profileConfigured", commands.isNotEmpty())
+                .put("protocol", "Philips RC6 mode 0 / 36 kHz")
                 .put("networkConnected", connected)
                 .put("message", when {
-                    connected -> "TV acessível pela rede Wi-Fi. Reconexão automática ativa."
-                    available -> "TV ainda não respondeu. O aplicativo continuará tentando reconectar."
-                    else -> "Aguardando TV na mesma rede Wi-Fi. Reconexão automática ativa."
+                    available -> "Infravermelho Philips RC6 disponível. Aponte a parte superior do celular para o sensor da TV."
+                    connected -> "TV acessível pela rede Wi-Fi. Infravermelho indisponível neste celular."
+                    else -> "Aguardando TV na rede. O controle IR funciona sem sincronização Wi-Fi quando o celular tem emissor."
                 }).toString()
         }
 
@@ -270,6 +285,12 @@ class MainActivity : Activity() {
                     else result(false, "Não consegui confirmar que a TV está ligada. Informe o MAC e ative Wake-on-LAN para despertá-la pela rede.")
                 }
             }
+            // Prefer direct IR so power-on works even when the TV is in network standby.
+            val manager = ir
+            if (manager?.hasIrEmitter() == true) {
+                return transmitPhilipsRc6(manager, normalized)
+            }
+
             val networkKey = networkKey(normalized)
             host = tvHost
             if (host != null && networkKey != null) {
@@ -297,16 +318,51 @@ class MainActivity : Activity() {
                 }
             }
 
-            val manager = ir ?: return result(false, "API infravermelha indisponível.")
-            if (!manager.hasIrEmitter()) return result(false, "Sincronize a TV pela mesma rede Wi-Fi ou use um celular com emissor IR.")
-            val pattern = commands[command.uppercase()]
-                ?: return result(false, "A TV ainda não está sincronizada e não há código IR validado para $MODEL.")
+            return result(false, "Este celular não possui emissor infravermelho. Use a conexão Wi-Fi ou um celular com IR.")
+        }
+
+        private fun transmitPhilipsRc6(manager: ConsumerIrManager, command: String): String {
+            val code = commands[command]
+                ?: return result(false, "Comando IR ainda não mapeado: $command.")
             return try {
+                val pattern = buildRc6Mode0(address = 0x00, command = code, toggle = rc6Toggle)
                 manager.transmit(36000, pattern)
-                result(true, "Sinal IR transmitido; recepção da TV não confirmada.")
+                rc6Toggle = !rc6Toggle
+                result(true, "Comando $command transmitido por infravermelho Philips RC6. Aponte o topo do celular para o sensor da TV.")
             } catch (e: Exception) {
                 result(false, "Falha na transmissão IR: ${e.message ?: "erro desconhecido"}")
             }
+        }
+
+        // ConsumerIrManager expects alternating mark/space durations in microseconds.
+        // RC6 mode 0: 6T mark + 2T space, start + 3 mode bits, double-width toggle,
+        // 8-bit address and 8-bit command. T = 444 microseconds.
+        private fun buildRc6Mode0(address: Int, command: Int, toggle: Boolean): IntArray {
+            data class Run(val mark: Boolean, val duration: Int)
+            val runs = mutableListOf<Run>()
+            fun add(mark: Boolean, duration: Int) {
+                if (runs.isNotEmpty() && runs.last().mark == mark) {
+                    val last = runs.removeAt(runs.lastIndex)
+                    runs.add(Run(mark, last.duration + duration))
+                } else runs.add(Run(mark, duration))
+            }
+            fun bit(value: Int, width: Int = 1) {
+                val half = 444 * width
+                if (value == 1) {
+                    add(true, half); add(false, half)
+                } else {
+                    add(false, half); add(true, half)
+                }
+            }
+            add(true, 2666)
+            add(false, 889)
+            bit(1) // start
+            bit(0); bit(0); bit(0) // mode 0
+            bit(if (toggle) 1 else 0, 2) // trailer/toggle bit is double width
+            for (shift in 7 downTo 0) bit((address shr shift) and 1)
+            for (shift in 7 downTo 0) bit((command shr shift) and 1)
+            // Android requires the pattern to start with a mark and alternate mark/space.
+            return runs.map { it.duration.coerceAtLeast(1) }.toIntArray()
         }
 
         private fun probeTv(host: String): Boolean {
