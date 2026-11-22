@@ -51,6 +51,9 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         ir = getSystemService(Context.CONSUMER_IR_SERVICE) as? ConsumerIrManager
         val saved = getSharedPreferences("philips_remote", Context.MODE_PRIVATE)
+        // Keep the RC6 toggle across process restarts so the TV does not reject
+        // the next POWER frame as a duplicate of the previous press.
+        rc6Toggle = saved.getBoolean("rc6_toggle", false)
         tvHost = saved.getString("tv_ip", null)
         tvApiVersion = saved.getInt("tv_api_version", 5)
         startLocalBridgeServer()
@@ -355,13 +358,19 @@ class MainActivity : Activity() {
         private fun transmitPhilipsRc6(manager: ConsumerIrManager, command: String): String {
             val code = commands[command]
                 ?: return result(false, "Comando IR ainda não mapeado: $command.")
-            return try {
-                val pattern = buildRc6Mode0(address = 0x00, command = code, toggle = rc6Toggle)
-                manager.transmit(36000, pattern)
-                rc6Toggle = !rc6Toggle
-                result(true, "Comando $command transmitido por infravermelho Philips RC6. Aponte o topo do celular para o sensor da TV.")
-            } catch (e: Exception) {
-                result(false, "Falha na transmissão IR: ${e.message ?: "erro desconhecido"}")
+            return synchronized(this@MainActivity) {
+                try {
+                    val currentToggle = rc6Toggle
+                    val pattern = buildRc6Mode0(address = 0x00, command = code, toggle = currentToggle)
+                    manager.transmit(36000, pattern)
+                    // Advance and persist only after Android accepts the transmission.
+                    rc6Toggle = !currentToggle
+                    getSharedPreferences("philips_remote", Context.MODE_PRIVATE)
+                        .edit().putBoolean("rc6_toggle", rc6Toggle).apply()
+                    result(true, "Comando $command transmitido por infravermelho Philips RC6. Aponte o topo do celular para o sensor da TV.")
+                } catch (e: Exception) {
+                    result(false, "Falha na transmissão IR: ${e.message ?: "erro desconhecido"}")
+                }
             }
         }
 
