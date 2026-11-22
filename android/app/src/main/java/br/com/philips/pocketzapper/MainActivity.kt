@@ -16,6 +16,10 @@ import java.net.URL
 import java.net.ServerSocket
 import java.net.InetAddress
 import java.net.Socket
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import android.net.wifi.WifiManager
+import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
@@ -25,6 +29,7 @@ class MainActivity : Activity() {
     private val commands = emptyMap<String, IntArray>()
     private var ir: ConsumerIrManager? = null
     private var tvHost: String? = null
+    private var tvMac: String? = null
     private var tvApiVersion: Int = 6
     private lateinit var webView: WebView
     @Volatile private var localServer: ServerSocket? = null
@@ -33,6 +38,9 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ir = getSystemService(Context.CONSUMER_IR_SERVICE) as? ConsumerIrManager
+        val saved = getSharedPreferences("tv-network", Context.MODE_PRIVATE)
+        tvHost = saved.getString("ip", null)
+        tvMac = saved.getString("mac", null)
         startLocalBridgeServer()
 
         webView = WebView(this).apply {
@@ -128,7 +136,7 @@ class MainActivity : Activity() {
                 val result = when {
                     method == "OPTIONS" -> ""
                     method == "GET" && path == "/status" -> IrBridge().getStatus()
-                    method == "POST" && path == "/connect" -> IrBridge().connectNetwork(JSONObject(body).optString("ip"))
+                    method == "POST" && path == "/connect" -> IrBridge().connectNetwork(JSONObject(body).optString("ip"), JSONObject(body).optString("mac"))
                     method == "POST" && path == "/send" -> IrBridge().send(JSONObject(body).optString("command"))
                     else -> JSONObject().put("ok", false).put("message", "Endpoint local desconhecido.").toString()
                 }
@@ -176,7 +184,7 @@ class MainActivity : Activity() {
         }
 
         @JavascriptInterface
-        fun connectNetwork(ip: String): String {
+        fun connectNetwork(ip: String, mac: String): String {
             val host = ip.trim()
             if (!IPV4.matches(host)) {
                 return result(false, "Digite um endereço IPv4 válido da TV, por exemplo 192.168.1.50.")
@@ -197,6 +205,10 @@ class MainActivity : Activity() {
                         if (json.has("api_version") || json.has("system") || json.has("name")) {
                             tvHost = host
                             tvApiVersion = version
+                            val normalizedMac = normalizeMac(mac) ?: findMacInArp(host) ?: tvMac
+                            if (normalizedMac != null) tvMac = normalizedMac
+                            getSharedPreferences("tv-network", Context.MODE_PRIVATE).edit()
+                                .putString("ip", host).putString("mac", tvMac).apply()
                             return JSONObject()
                                 .put("ok", true)
                                 .put("message", "TV Philips encontrada na rede. API SAPHI v$version respondeu.")
@@ -237,12 +249,14 @@ class MainActivity : Activity() {
                         result(false, "A TV respondeu com HTTP $code. Tente sincronizar novamente.")
                     }
                 } catch (e: Exception) {
-                    result(false, "Falha ao enviar comando pela rede: ${e.message ?: "erro de conexão"}.")
+                    if (command.equals("POWER", ignoreCase = true)) sendWakeOnWifi()
+                    else result(false, "Falha ao enviar comando pela rede: ${e.message ?: "erro de conexão"}.")
                 } finally {
                     connection?.disconnect()
                 }
             }
 
+            if (command.equals("POWER", ignoreCase = true) && tvHost != null) return sendWakeOnWifi()
             val manager = ir ?: return result(false, "API infravermelha indisponível.")
             if (!manager.hasIrEmitter()) return result(false, "Sincronize a TV pela mesma rede Wi-Fi ou use um celular com emissor IR.")
             val pattern = commands[command.uppercase()]
@@ -252,6 +266,50 @@ class MainActivity : Activity() {
                 result(true, "Sinal IR transmitido; recepção da TV não confirmada.")
             } catch (e: Exception) {
                 result(false, "Falha na transmissão IR: ${e.message ?: "erro desconhecido"}")
+            }
+        }
+
+
+        private fun normalizeMac(value: String): String? {
+            val cleaned = value.trim().replace("-", ":").uppercase()
+            return cleaned.takeIf { Regex("^(?:[0-9A-F]{2}:){5}[0-9A-F]{2}$").matches(it) }
+        }
+
+        private fun findMacInArp(ip: String): String? = try {
+            File("/proc/net/arp").readLines().drop(1).firstNotNullOfOrNull { line ->
+                val fields = line.trim().split(Regex("\\s+"))
+                if (fields.size >= 4 && fields[0] == ip && fields[3] != "00:00:00:00:00:00") normalizeMac(fields[3]) else null
+            }
+        } catch (_: Exception) { null }
+
+        private fun sendWakeOnWifi(): String {
+            val mac = tvMac ?: return result(false, "Para acordar a TV por Wi-Fi, informe o MAC da TV nas configurações. Consulte a etiqueta ou a lista de dispositivos do roteador.")
+            val macBytes = mac.split(":").map { it.toInt(16).toByte() }.toByteArray()
+            val payload = ByteArray(6 + 16 * macBytes.size)
+            for (i in 0 until 6) payload[i] = 0xFF.toByte()
+            for (i in 0 until 16) System.arraycopy(macBytes, 0, payload, 6 + i * macBytes.size, macBytes.size)
+            return try {
+                val wifi = getSystemService(Context.WIFI_SERVICE) as WifiManager
+                val dhcp = wifi.dhcpInfo
+                val broadcastValue = (dhcp.ipAddress and dhcp.netmask) or dhcp.netmask.inv()
+                val broadcast = InetAddress.getByAddress(byteArrayOf(
+                    (broadcastValue and 0xff).toByte(),
+                    (broadcastValue shr 8 and 0xff).toByte(),
+                    (broadcastValue shr 16 and 0xff).toByte(),
+                    (broadcastValue shr 24 and 0xff).toByte()
+                ))
+                DatagramSocket().use { socket ->
+                    socket.broadcast = true
+                    listOf(broadcast, InetAddress.getByName("255.255.255.255")).distinct().forEach { address ->
+                        listOf(9, 7).forEach { port ->
+                            val packet = DatagramPacket(payload, payload.size, address, port)
+                            repeat(3) { socket.send(packet) }
+                        }
+                    }
+                }
+                result(true, "Pacote Wake-on-Wi-Fi enviado para $mac. A TV precisa estar em standby e com WoWLAN ativado; a confirmação depende da TV.")
+            } catch (e: Exception) {
+                result(false, "Não foi possível enviar o pacote Wake-on-Wi-Fi: ${e.message ?: "erro de rede"}.")
             }
         }
 
