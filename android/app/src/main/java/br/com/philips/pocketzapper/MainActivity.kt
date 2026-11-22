@@ -209,10 +209,16 @@ class MainActivity : Activity() {
                             if (normalizedMac != null) tvMac = normalizedMac
                             getSharedPreferences("tv-network", Context.MODE_PRIVATE).edit()
                                 .putString("ip", host).putString("mac", tvMac).apply()
+                            val wakeMessage = if (tvMac != null) {
+                                "TV Philips encontrada. API SAPHI v$version respondeu e o MAC $tvMac está salvo para Wake-on-LAN."
+                            } else {
+                                "TV encontrada e API SAPHI v$version respondeu, mas não consegui descobrir o MAC. Informe o MAC Wi-Fi/Ethernet da TV nas configurações para conseguir ligá-la em standby."
+                            }
                             return JSONObject()
                                 .put("ok", true)
-                                .put("message", "TV Philips encontrada na rede. API SAPHI v$version respondeu.")
+                                .put("message", wakeMessage)
                                 .put("ip", host)
+                                .put("mac", tvMac ?: "")
                                 .put("apiVersion", version)
                                 .toString()
                         }
@@ -285,33 +291,48 @@ class MainActivity : Activity() {
         } catch (_: Exception) { null }
 
         private fun sendWakeOnWifi(): String {
-            val mac = tvMac ?: return result(false, "Para acordar a TV por Wi-Fi, informe o MAC da TV nas configurações. Consulte a etiqueta ou a lista de dispositivos do roteador.")
+            val mac = tvMac ?: return result(false, "Não consigo ligar a TV porque o MAC não foi identificado. Informe o MAC Wi-Fi/Ethernet da Philips nas configurações (veja a lista de dispositivos do roteador).")
             val macBytes = mac.split(":").map { it.toInt(16).toByte() }.toByteArray()
             val payload = ByteArray(6 + 16 * macBytes.size)
             for (i in 0 until 6) payload[i] = 0xFF.toByte()
             for (i in 0 until 16) System.arraycopy(macBytes, 0, payload, 6 + i * macBytes.size, macBytes.size)
             return try {
+                val addresses = linkedSetOf<InetAddress>()
                 val wifi = getSystemService(Context.WIFI_SERVICE) as WifiManager
                 val dhcp = wifi.dhcpInfo
-                val broadcastValue = (dhcp.ipAddress and dhcp.netmask) or dhcp.netmask.inv()
-                val broadcast = InetAddress.getByAddress(byteArrayOf(
-                    (broadcastValue and 0xff).toByte(),
-                    (broadcastValue shr 8 and 0xff).toByte(),
-                    (broadcastValue shr 16 and 0xff).toByte(),
-                    (broadcastValue shr 24 and 0xff).toByte()
-                ))
+                if (dhcp.ipAddress != 0 && dhcp.netmask != 0) {
+                    val broadcastValue = (dhcp.ipAddress and dhcp.netmask) or dhcp.netmask.inv()
+                    addresses.add(InetAddress.getByAddress(byteArrayOf(
+                        (broadcastValue and 0xff).toByte(),
+                        (broadcastValue shr 8 and 0xff).toByte(),
+                        (broadcastValue shr 16 and 0xff).toByte(),
+                        (broadcastValue shr 24 and 0xff).toByte()
+                    )))
+                }
+                // Some Android builds return an empty DHCP record. For the configured
+                // 192.168.1.x network, retain a directed-broadcast fallback as well.
+                val host = tvHost
+                if (host != null) {
+                    val octets = host.split(".")
+                    if (octets.size == 4) {
+                        addresses.add(InetAddress.getByName("${octets[0]}.${octets[1]}.${octets[2]}.255"))
+                        addresses.add(InetAddress.getByName(host))
+                    }
+                }
+                addresses.add(InetAddress.getByName("255.255.255.255"))
+                if (addresses.isEmpty()) return result(false, "Não encontrei uma rota de rede Wi-Fi para enviar o pacote Wake-on-LAN.")
                 DatagramSocket().use { socket ->
                     socket.broadcast = true
-                    listOf(broadcast, InetAddress.getByName("255.255.255.255")).distinct().forEach { address ->
+                    addresses.forEach { address ->
                         listOf(9, 7).forEach { port ->
                             val packet = DatagramPacket(payload, payload.size, address, port)
                             repeat(3) { socket.send(packet) }
                         }
                     }
                 }
-                result(true, "Pacote Wake-on-Wi-Fi enviado para $mac. A TV precisa estar em standby e com WoWLAN ativado; a confirmação depende da TV.")
+                result(true, "Pacote Wake-on-LAN enviado para $mac por ${addresses.size} endereços. A TV precisa estar em standby de rede com WoWLAN ativado; o envio não confirma que ela ligou.")
             } catch (e: Exception) {
-                result(false, "Não foi possível enviar o pacote Wake-on-Wi-Fi: ${e.message ?: "erro de rede"}.")
+                result(false, "Falha ao enviar Wake-on-LAN: ${e.message ?: "erro de rede"}. Verifique a conexão Wi-Fi do celular.")
             }
         }
 
