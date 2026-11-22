@@ -14,10 +14,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class MainActivity : Activity() {
-    private lateinit var webView: WebView
     // Intentionally empty until pulse patterns are verified for Philips 50PUG6654/78.
     private val commands = emptyMap<String, IntArray>()
     private var ir: ConsumerIrManager? = null
+    private lateinit var webView: WebView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,14 +31,12 @@ class MainActivity : Activity() {
             settings.javaScriptCanOpenWindowsAutomatically = false
             settings.setSupportMultipleWindows(false)
             webViewClient = object : WebViewClient() {
-                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                    return !isTrustedUrl(request.url)
-                }
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
+                    !isTrustedUrl(request.url)
 
                 @Suppress("DEPRECATION")
-                override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
-                    return !isTrustedUrl(Uri.parse(url))
-                }
+                override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean =
+                    !isTrustedUrl(Uri.parse(url))
             }
             webChromeClient = WebChromeClient()
             addJavascriptInterface(IrBridge(), "PhilipsIR")
@@ -58,12 +56,10 @@ class MainActivity : Activity() {
             val ranges = manager?.carrierFrequencies?.toList().orEmpty()
             val rangeJson = JSONArray()
             ranges.chunked(2).forEach { range ->
-                if (range.size == 2) {
-                    rangeJson.put(JSONArray().put(range[0]).put(range[1]))
-                }
+                if (range.size == 2) rangeJson.put(JSONArray().put(range[0]).put(range[1]))
             }
             val supports36kHz = ranges.chunked(2).any { range ->
-                range.size == 2 && 36000 in range[0]..range[1]
+                range.size == 2 && 36000.0 in range[0]..range[1]
             }
             return JSONObject()
                 .put("available", available)
