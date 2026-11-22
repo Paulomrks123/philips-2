@@ -25,8 +25,8 @@ class MainActivity : Activity() {
     // IR pulse patterns remain empty until verified for this exact TV model.
     private val commands = emptyMap<String, IntArray>()
     private var ir: ConsumerIrManager? = null
-    private var tvHost: String? = null
-    private var tvApiVersion: Int = 6
+    @Volatile private var tvHost: String? = null
+    @Volatile private var tvApiVersion: Int = 6
     private lateinit var webView: WebView
     @Volatile private var localServer: ServerSocket? = null
     @Volatile private var serverRunning = false
@@ -63,8 +63,8 @@ class MainActivity : Activity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
             when (event.keyCode) {
-                KeyEvent.KEYCODE_VOLUME_UP -> { IrBridge().send("VOLUME_UP"); return true }
-                KeyEvent.KEYCODE_VOLUME_DOWN -> { IrBridge().send("VOLUME_DOWN"); return true }
+                KeyEvent.KEYCODE_VOLUME_UP -> { Thread { IrBridge().send("VOLUME_UP") }.start(); return true }
+                KeyEvent.KEYCODE_VOLUME_DOWN -> { Thread { IrBridge().send("VOLUME_DOWN") }.start(); return true }
             }
         }
         return super.dispatchKeyEvent(event)
