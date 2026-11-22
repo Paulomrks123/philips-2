@@ -293,14 +293,12 @@ class MainActivity : Activity() {
             val normalized = command.uppercase()
             val prefs = getSharedPreferences("philips_remote", Context.MODE_PRIVATE)
             var host = tvHost
-            // Use IR before attempting a network reconnect: this is immediate and works
-            // even when the TV is asleep or the phone has no Wi-Fi route to the TV.
+            // Power is intentionally Wi-Fi-first. In standby, SAPHI may not answer;
+            // Wake-on-Wi-Fi (WoWLAN) must be enabled on the TV and the saved MAC is
+            // used to send a magic packet on the local network.
             val manager = ir
             val hasIr = manager?.hasIrEmitter() == true
             val rc6Carrier = if (hasIr) supportedRc6Carrier(manager) else null
-            if (hasIr && rc6Carrier != null) {
-                return transmitPhilipsRc6(manager!!, normalized, rc6Carrier)
-            }
 
             if (host == null) {
                 val savedIp = prefs.getString("tv_ip", null)
@@ -316,13 +314,14 @@ class MainActivity : Activity() {
                 val mac = prefs.getString("tv_mac", null)
                 if (host == null) {
                     return if (!mac.isNullOrBlank()) wakeOnLan(mac, prefs.getString("tv_ip", null))
-                    else result(false, "TV fora da rede. Para ligar em standby por Wi-Fi, informe o MAC e habilite Wake-on-LAN; se possível, use um celular com IR.")
+                    else result(false, "Para ligar por Wi-Fi em standby, habilite “Ligar com Wi-Fi (WoWLAN)” na TV e informe o MAC dela no aplicativo. O IP salvo é 192.168.1.2.")
                 }
                 val state = readPowerState(host)
                 if (state != "on") {
                     return if (!mac.isNullOrBlank()) wakeOnLan(mac, host)
-                    else result(false, "A TV não confirmou estado ligado. Para despertá-la por Wi-Fi, informe o MAC e habilite Wake-on-LAN.")
+                    else result(false, "A TV não confirmou que está ligada. Habilite “Ligar com Wi-Fi (WoWLAN)” e informe o MAC da TV para acordá-la pela rede.")
                 }
+                // When the TV is awake, the SAPHI API sends the standby command below.
             }
 
             val networkKey = networkKey(normalized)
@@ -352,7 +351,10 @@ class MainActivity : Activity() {
                 }
             }
 
-            return result(false, if (hasIr) "O emissor IR deste celular não suporta 36 ou 38 kHz. Conecte a TV pela rede Wi-Fi." else "Este celular não possui emissor infravermelho. Conecte a TV pela rede Wi-Fi ou use um transmissor IR externo compatível.")
+            if (normalized != "POWER" && hasIr && rc6Carrier != null) {
+                return transmitPhilipsRc6(manager!!, normalized, rc6Carrier)
+            }
+            return result(false, if (normalized == "POWER") "Não foi possível acordar a TV por Wi-Fi. Confira se WoWLAN está ligado, se o MAC está correto e se celular e TV estão na mesma rede." else if (hasIr) "Wi-Fi indisponível e o emissor IR deste celular não suporta 36 ou 38 kHz." else "Este celular não possui emissor infravermelho. Conecte a TV pela rede Wi-Fi.")
         }
 
         private fun supportedRc6Carrier(manager: ConsumerIrManager?): Int? {
