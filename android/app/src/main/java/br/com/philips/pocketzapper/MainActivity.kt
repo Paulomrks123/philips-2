@@ -124,7 +124,7 @@ class MainActivity : Activity() {
                     offset += count
                 }
                 val body = String(bodyBytes, 0, offset, StandardCharsets.UTF_8)
-                val validPath = path in listOf("/status", "/connect", "/send")
+                val validPath = (method == "GET" && path == "/status") || (method == "POST" && path in listOf("/connect", "/send"))
                 val result = when {
                     method == "OPTIONS" -> ""
                     method == "GET" && path == "/status" -> IrBridge().getStatus()
