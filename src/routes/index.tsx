@@ -121,11 +121,12 @@ function Index() {
     setSyncStatus("Procurando a TV na rede local...");
     try {
       const response = window.PhilipsIR
-        ? JSON.parse(window.PhilipsIR.connectNetwork(tvIp, tvMac)) as { ok: boolean; message: string }
-        : await callLocalBridge<{ ok: boolean; message: string }>("/connect", { ip: tvIp, mac: tvMac });
+        ? JSON.parse(window.PhilipsIR.connectNetwork(tvIp, tvMac)) as { ok: boolean; message: string; mac?: string }
+        : await callLocalBridge<{ ok: boolean; message: string; mac?: string }>("/connect", { ip: tvIp, mac: tvMac });
       setSyncStatus(response.message);
       if (response.ok) {
-        if (tvMac.trim()) localStorage.setItem("philips-tv-mac", tvMac.trim());
+        if (response.mac) setTvMac(response.mac);
+        if ((response.mac || tvMac).trim()) localStorage.setItem("philips-tv-mac", (response.mac || tvMac).trim());
         setIrStatus((previous) => ({
           available: previous?.available ?? false,
           profileConfigured: previous?.profileConfigured ?? false,
@@ -167,9 +168,9 @@ function Index() {
                 <span className="text-sm font-semibold">Conectar à TV</span>
                 <input aria-label="Endereço IP da TV" value={tvIp} onChange={(e) => setTvIp(e.target.value)} placeholder="IP da TV (192.168.1.2)" inputMode="decimal"
                   className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
-                <input aria-label="Endereço MAC da TV" value={tvMac} onChange={(e) => setTvMac(e.target.value)} placeholder="MAC da TV (opcional, ex.: A0:B1:C2:D3:E4:F5)" autoCapitalize="characters"
+                <input aria-label="Endereço MAC da TV" value={tvMac} onChange={(e) => setTvMac(e.target.value)} placeholder="MAC da TV (necessário para ligar em standby)" autoCapitalize="characters"
                   className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
-                <p className="text-xs text-muted-foreground">O aplicativo tenta detectar o MAC durante a sincronização. Se não conseguir, informe o MAC exibido no roteador.</p>
+                <p className="text-xs text-muted-foreground">O aplicativo tenta detectar o MAC durante a sincronização. Para ligar a TV quando estiver em standby, o MAC é obrigatório. Se não for detectado automaticamente, copie o MAC Wi-Fi/Ethernet da TV na lista de dispositivos do roteador.</p>
                 <Button onClick={syncTv} className="gap-2"><Wifi className="h-4 w-4" /> Sincronizar</Button>
                 {syncStatus && <p role="status" className="text-xs text-muted-foreground">{syncStatus}</p>}
               </div>
