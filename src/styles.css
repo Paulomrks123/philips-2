@@ -221,3 +221,19 @@
   *, *::before, *::after { animation:none !important; transition:none !important; }
 }
 @keyframes slide-up { from { transform:translateY(100%); } to { transform:translateY(0); } }
+
+
+/* User-selectable remote density presets */
+.layout-compact .remote-main { padding: .75rem 1rem .5rem; }
+.layout-compact .remote-large { width: 68px; height: 68px; }
+.layout-compact .remote-medium { width: 48px; height: 48px; }
+.layout-compact .remote-navigation { margin-top: .5rem; }
+.layout-compact .dpad { max-width: 190px; }
+.layout-compact .remote-menu, .layout-compact .remote-bottom { margin-top: .75rem; }
+.layout-minimal .remote-main { padding: .5rem .75rem .35rem; }
+.layout-minimal .remote-large { width: 56px; height: 56px; }
+.layout-minimal .remote-medium { width: 42px; height: 42px; }
+.layout-minimal .remote-navigation { margin-top: .25rem; }
+.layout-minimal .dpad { max-width: 168px; }
+.layout-minimal .remote-menu, .layout-minimal .remote-bottom { margin-top: .5rem; gap: 1.25rem; }
+.layout-minimal .remote-feedback { margin-top: .5rem; }
