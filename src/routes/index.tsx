@@ -21,10 +21,10 @@ type IrStatus = { available: boolean; profileConfigured: boolean; message: strin
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Philips Remote — Protótipo 26PFL3404" },
-      { name: "description", content: "Protótipo visual do controle remoto Philips 26PFL3404. Sem transmissão infravermelha." },
-      { property: "og:title", content: "Philips Remote — Protótipo 26PFL3404" },
-      { property: "og:description", content: "Protótipo visual do controle remoto Philips 26PFL3404." },
+      { title: "Philips Remote — 50PUG6654/78" },
+      { name: "description", content: "Controle remoto para Philips 50PUG6654/78." },
+      { property: "og:title", content: "Philips Remote — 50PUG6654/78" },
+      { property: "og:description", content: "Controle remoto para Philips 50PUG6654/78." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -91,7 +91,7 @@ function Index() {
       <header className="remote-header bg-[image:var(--gradient-header)] px-4 pb-2 text-primary-foreground">
         <div className="flex items-center justify-center gap-2">
           <img src={appIcon.url} width={32} height={32} alt="" className="size-8 shrink-0 rounded-md" />
-          <h1 className="text-lg font-semibold">Philips TV 26PFL3404</h1>
+          <h1 className="text-lg font-semibold">Philips TV 50PUG6654/78</h1>
         </div>
         <div className="mt-2 flex items-center justify-center gap-1 rounded-md bg-background/20 px-2 py-1 text-center text-xs">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {irStatus ? irStatus.message : "Modo web: sem acesso direto ao infravermelho"}
