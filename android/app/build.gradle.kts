@@ -11,8 +11,8 @@ android {
         applicationId = "br.com.philips.pocketzapper.star"
         minSdk = 23
         targetSdk = 35
-        versionCode = 4
-        versionName = "2.1.1"
+        versionCode = 5
+        versionName = "2.1.2"
     }
 
     // Keep Java and Kotlin bytecode targets aligned for reproducible Android builds.
