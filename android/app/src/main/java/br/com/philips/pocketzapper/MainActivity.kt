@@ -245,6 +245,8 @@ class MainActivity : Activity() {
                     val code = connection.responseCode
                     if (code in 200..299) {
                         result(true, "Comando enviado à TV pela rede Wi-Fi.")
+                    } else if (command.equals("POWER", ignoreCase = true)) {
+                        sendWakeOnWifi()
                     } else {
                         result(false, "A TV respondeu com HTTP $code. Tente sincronizar novamente.")
                     }
