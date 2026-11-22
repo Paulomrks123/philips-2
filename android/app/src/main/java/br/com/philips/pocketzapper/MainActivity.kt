@@ -14,7 +14,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class MainActivity : Activity() {
-    // Intentionally empty until pulse patterns are verified for Philips 26PFL3404.
+    // No IR pulse table has been verified for Philips 50PUG6654/78 yet.
+    // Keep this empty rather than transmitting guessed commands.
     private val commands = emptyMap<String, IntArray>()
     private var ir: ConsumerIrManager? = null
     private lateinit var webView: WebView
@@ -53,15 +54,17 @@ class MainActivity : Activity() {
         fun getStatus(): String {
             val manager = ir
             val available = manager?.hasIrEmitter() == true
-            val ranges = manager?.carrierFrequencies?.toList().orEmpty()
+            val frequencies = manager?.carrierFrequencies ?: intArrayOf()
             val rangeJson = JSONArray()
-            ranges.chunked(2).forEach { range ->
-                if (range.size == 2) rangeJson.put(JSONArray().put(range[0]).put(range[1]))
+            var index = 0
+            while (index + 1 < frequencies.size) {
+                rangeJson.put(JSONArray().put(frequencies[index]).put(frequencies[index + 1]))
+                index += 2
             }
-            val supports36kHz = ranges.chunked(2).any { range ->
-                range.size == 2 &&
-                    36000.0 >= range[0].toDouble() &&
-                    36000.0 <= range[1].toDouble()
+            val supports36kHz = (frequencies.indices step 2).any { i ->
+                i + 1 < frequencies.size &&
+                    36000 >= frequencies[i] &&
+                    36000 <= frequencies[i + 1]
             }
             return JSONObject()
                 .put("available", available)
@@ -72,8 +75,8 @@ class MainActivity : Activity() {
                 .put("message", when {
                     !available -> "Emissor infravermelho não detectado pela API Android."
                     !supports36kHz -> "Emissor IR detectado, mas 36 kHz não consta entre as frequências suportadas."
-                    commands.isEmpty() -> "Emissor IR detectado e 36 kHz suportado. Códigos da TV ainda precisam ser validados."
-                    else -> "Emissor IR disponível."
+                    commands.isEmpty() -> "TV Philips 50PUG6654/78 selecionada. Emissor IR detectado; códigos específicos ainda precisam ser validados."
+                    else -> "Emissor IR disponível para o perfil selecionado."
                 }).toString()
         }
 
@@ -84,12 +87,12 @@ class MainActivity : Activity() {
             val pattern = commands[command.uppercase()]
                 ?: return result(false, "Comando sem código validado para $MODEL.")
             val carrierHz = 36000
-            val supportsCarrier = manager.carrierFrequencies
-                ?.toList()
-                ?.chunked(2)
-                ?.any { range ->
-                    range.size == 2 && carrierHz >= range[0] && carrierHz <= range[1]
-                } == true
+            val frequencies = manager.carrierFrequencies ?: intArrayOf()
+            val supportsCarrier = (frequencies.indices step 2).any { i ->
+                i + 1 < frequencies.size &&
+                    carrierHz >= frequencies[i] &&
+                    carrierHz <= frequencies[i + 1]
+            }
             if (!supportsCarrier) return result(false, "Frequência de 36 kHz não suportada pelo aparelho.")
             return try {
                 manager.transmit(carrierHz, pattern)
@@ -106,6 +109,6 @@ class MainActivity : Activity() {
     companion object {
         private const val APP_URL = "https://philips-pocket-zapper.lovable.app"
         private const val APP_HOST = "philips-pocket-zapper.lovable.app"
-        private const val MODEL = "Philips 26PFL3404"
+        private const val MODEL = "Philips 50PUG6654/78"
     }
 }
