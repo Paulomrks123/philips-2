@@ -1,9 +1,9 @@
 {
-  "model": "Philips 26PFL3404",
-  "remoteControlType": "PF01L09B",
+  "model": "Philips 50PUG6654/78",
+  "remoteControlType": "Não confirmado",
   "carrierHz": null,
   "protocol": null,
   "verified": false,
   "commands": {},
-  "note": "Intencionalmente vazio: inserir apenas padrões IR validados para este modelo."
+  "note": "Perfil correto da TV; inserir apenas códigos IR medidos ou confirmados para este modelo."
 }
