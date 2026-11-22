@@ -19,6 +19,21 @@ declare global {
 
 type IrStatus = { available: boolean; profileConfigured: boolean; supports36kHz?: boolean; networkConnected?: boolean; carrierRangesHz?: number[][]; message: string };
 
+const LOCAL_BRIDGE = "http://127.0.0.1:8765";
+
+async function callLocalBridge<T>(path: string, body?: Record<string, string>): Promise<T> {
+  const response = await fetch(`${LOCAL_BRIDGE}${path}`, {
+    method: body ? "POST" : "GET",
+    headers: body ? { "Content-Type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+    mode: "cors",
+    cache: "no-store",
+    signal: AbortSignal.timeout(12000),
+  });
+  if (!response.ok) throw new Error(`Ponte local respondeu HTTP ${response.status}`);
+  return response.json() as Promise<T>;
+}
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -67,41 +82,55 @@ function Index() {
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    const readStatus = () => {
-      if (!window.PhilipsIR) return;
-      try { setIrStatus(JSON.parse(window.PhilipsIR.getStatus()) as IrStatus); }
-      catch { setIrStatus({ available: false, profileConfigured: false, message: "Não foi possível consultar o módulo IR." }); }
+    let active = true;
+    const readStatus = async () => {
+      try {
+        const status = window.PhilipsIR
+          ? JSON.parse(window.PhilipsIR.getStatus()) as IrStatus
+          : await callLocalBridge<IrStatus>("/status");
+        if (active) setIrStatus(status);
+      } catch {
+        if (active) setIrStatus({
+          available: false,
+          profileConfigured: false,
+          networkConnected: false,
+          message: "Abra o Philips Pocket Zapper auxiliar no Android para ativar a ponte local do PWA.",
+        });
+      }
     };
-    readStatus();
+    void readStatus();
+    return () => { active = false; };
   }, []);
 
-  const syncTv = () => {
-    if (!window.PhilipsIR) {
-      setSyncStatus("A sincronização Wi-Fi exige a versão Android instalada, não o navegador.");
-      return;
-    }
+  const syncTv = async () => {
+    setSyncStatus("Procurando a TV na rede local...");
     try {
-      const response = JSON.parse(window.PhilipsIR.connectNetwork(tvIp)) as { ok: boolean; message: string };
+      const response = window.PhilipsIR
+        ? JSON.parse(window.PhilipsIR.connectNetwork(tvIp)) as { ok: boolean; message: string }
+        : await callLocalBridge<{ ok: boolean; message: string }>("/connect", { ip: tvIp });
       setSyncStatus(response.message);
       if (response.ok) {
-        setIrStatus((previous) => previous ? { ...previous, networkConnected: true, message: "TV conectada pela rede Wi-Fi." } : previous);
+        setIrStatus((previous) => ({
+          available: previous?.available ?? false,
+          profileConfigured: previous?.profileConfigured ?? false,
+          networkConnected: true,
+          message: "TV encontrada pela ponte local.",
+        }));
       }
     } catch {
-      setSyncStatus("Não foi possível iniciar a sincronização. Confira o IP da TV.");
+      setSyncStatus("Ponte local indisponível. Abra o aplicativo auxiliar Philips Pocket Zapper no Android, mantenha-o em segundo plano e tente novamente. Se o Chrome pedir acesso à rede local, permita.");
     }
   };
 
-  const press = (c: string) => {
+  const press = async (c: string) => {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate?.(15);
-    if (!window.PhilipsIR) {
-      setLast(`${c}: abra a versão Android nativa para acessar o infravermelho; navegador/PWA não transmite IR.`);
-      return;
-    }
     try {
-      const response = JSON.parse(window.PhilipsIR.send(c)) as { ok: boolean; message: string };
+      const response = window.PhilipsIR
+        ? JSON.parse(window.PhilipsIR.send(c)) as { ok: boolean; message: string }
+        : await callLocalBridge<{ ok: boolean; message: string }>("/send", { command: c });
       setLast(`${c}: ${response.message}`);
     } catch {
-      setLast(`${c}: erro ao comunicar com o módulo infravermelho.`);
+      setLast(`${c}: ponte local indisponível. Abra o aplicativo auxiliar Android e mantenha-o em segundo plano.`);
     }
   };
 
