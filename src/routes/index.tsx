@@ -12,7 +12,7 @@ declare global {
     PhilipsIR?: {
       getStatus: () => string;
       send: (command: string) => string;
-      connectNetwork: (ip: string) => string;
+      connectNetwork: (ip: string, mac: string) => string;
     };
   }
 }
@@ -85,6 +85,7 @@ function Index() {
   const [digits, setDigits] = useState("");
   const [irStatus, setIrStatus] = useState<IrStatus | null>(null);
   const [tvIp, setTvIp] = useState(() => typeof window === "undefined" ? "192.168.1.2" : window.localStorage.getItem("philips-zapper-tv-ip") || "192.168.1.2");
+  const [tvMac, setTvMac] = useState(() => typeof window === "undefined" ? "" : window.localStorage.getItem("philips-zapper-tv-mac") || "");
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -92,56 +93,53 @@ function Index() {
   }, [layout]);
 
   useEffect(() => {
-    window.localStorage.setItem("philips-zapper-tv-ip", tvIp);
+    window.localStorage.setItem("philips-zapper-tv-ip", tvIp.trim());
   }, [tvIp]);
 
   useEffect(() => {
+    window.localStorage.setItem("philips-zapper-tv-mac", tvMac.trim());
+  }, [tvMac]);
+
+  useEffect(() => {
     let active = true;
-    const readStatus = async () => {
+    let busy = false;
+    const reconnect = async () => {
+      if (!active || busy || document.visibilityState === "hidden") return;
+      busy = true;
       try {
         const status = window.PhilipsIR
           ? JSON.parse(window.PhilipsIR.getStatus()) as IrStatus
           : await callLocalBridge<IrStatus>("/status");
         if (active) setIrStatus(status);
+        if (active && !status.networkConnected) {
+          const result = window.PhilipsIR
+            ? JSON.parse(window.PhilipsIR.connectNetwork(tvIp, tvMac)) as { ok: boolean; message: string }
+            : await callLocalBridge<{ ok: boolean; message: string }>("/connect", { ip: tvIp, mac: tvMac });
+          if (active && result.ok) setSyncStatus("Conexão restaurada automaticamente. " + result.message);
+        }
       } catch {
         if (active) setIrStatus({
-          available: false,
-          profileConfigured: false,
-          networkConnected: false,
-          message: "Abra o Philips Pocket Zapper auxiliar no Android para ativar a ponte local do PWA.",
+          available: false, profileConfigured: false, networkConnected: false,
+          message: "Aguardando a ponte Android e a TV na rede local. A reconexão será tentada automaticamente.",
         });
-      }
+      } finally { busy = false; }
     };
-    void readStatus();
-    const savedIp = window.localStorage.getItem("philips-zapper-tv-ip");
-    if (savedIp && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(savedIp)) {
-      const reconnect = async () => {
-        try {
-          const result = window.PhilipsIR
-            ? JSON.parse(window.PhilipsIR.connectNetwork(savedIp)) as { ok: boolean; message: string }
-            : await callLocalBridge<{ ok: boolean; message: string }>("/connect", { ip: savedIp });
-          if (active && result.ok) {
-            setSyncStatus(`Reconectado automaticamente: ${result.message}`);
-            setIrStatus((previous) => ({
-              available: previous?.available ?? false,
-              profileConfigured: previous?.profileConfigured ?? false,
-              networkConnected: true,
-              message: "TV conectada pela rede Wi-Fi.",
-            }));
-          }
-        } catch { /* Mantém o IP salvo para uma nova tentativa posterior. */ }
-      };
-      void reconnect();
-    }
-    return () => { active = false; };
-  }, []);
+    void reconnect();
+    const timer = window.setInterval(() => { void reconnect(); }, 10000);
+    document.addEventListener("visibilitychange", reconnect);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", reconnect);
+    };
+  }, [tvIp, tvMac]);
 
   const syncTv = async () => {
     setSyncStatus("Procurando a TV na rede local...");
     try {
       const response = window.PhilipsIR
-        ? JSON.parse(window.PhilipsIR.connectNetwork(tvIp)) as { ok: boolean; message: string }
-        : await callLocalBridge<{ ok: boolean; message: string }>("/connect", { ip: tvIp });
+        ? JSON.parse(window.PhilipsIR.connectNetwork(tvIp, tvMac)) as { ok: boolean; message: string }
+        : await callLocalBridge<{ ok: boolean; message: string }>("/connect", { ip: tvIp, mac: tvMac });
       setSyncStatus(response.message);
       if (response.ok) {
         setIrStatus((previous) => ({
@@ -195,6 +193,13 @@ function Index() {
             <Wifi className="h-4 w-4" /> Sincronizar
           </Button>
         </div>
+        <div className="mt-2 flex gap-2">
+          <input aria-label="Endereço MAC da TV para ligar em standby" value={tvMac}
+            onChange={(event) => setTvMac(event.target.value)}
+            placeholder="MAC da TV (necessário para ligar em standby)"
+            className="min-w-0 flex-1 rounded-lg border border-primary-foreground/30 bg-background/15 px-3 py-2 text-xs text-primary-foreground placeholder:text-primary-foreground/65 outline-none focus:ring-2 focus:ring-primary-foreground/50" />
+        </div>
+        <p className="mt-1 text-[10px] text-primary-foreground/75">Para ligar a TV em standby pela rede, ative Wake-on-LAN na TV e informe o MAC. Sem isso, a rede SAPHI não garante o despertar.</p>
         {syncStatus && <p role="status" className="mt-2 text-center text-xs text-primary-foreground">{syncStatus}</p>}
       </header>
 
