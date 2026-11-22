@@ -146,7 +146,7 @@ class MainActivity : Activity() {
                 val result = when {
                     method == "OPTIONS" -> ""
                     method == "GET" && path == "/status" -> IrBridge().getStatus()
-                    method == "POST" && path == "/connect" -> IrBridge().connectNetwork(JSONObject(body).optString("ip"))
+                    method == "POST" && path == "/connect" -> IrBridge().connectNetwork(JSONObject(body).optString("ip"), JSONObject(body).optString("mac"))
                     method == "POST" && path == "/send" -> IrBridge().send(JSONObject(body).optString("command"))
                     else -> JSONObject().put("ok", false).put("message", "Endpoint local desconhecido.").toString()
                 }
