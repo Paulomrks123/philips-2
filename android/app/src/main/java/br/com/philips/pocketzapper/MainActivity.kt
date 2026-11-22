@@ -56,17 +56,10 @@ class MainActivity : Activity() {
         fun getStatus(): String {
             val manager = ir
             val available = manager?.hasIrEmitter() == true
-            val frequencies = manager?.carrierFrequencies ?: intArrayOf()
-            val supports36kHz = (frequencies.indices step 2).any { i ->
-                i + 1 < frequencies.size &&
-                    36000 >= frequencies[i] &&
-                    36000 <= frequencies[i + 1]
-            }
             return JSONObject()
                 .put("available", available)
                 .put("profile", MODEL)
                 .put("profileConfigured", commands.isNotEmpty())
-                .put("supports36kHz", supports36kHz)
                 .put("networkConnected", tvHost != null)
                 .put("message", when {
                     tvHost != null -> "TV conectada pela rede Wi-Fi."
