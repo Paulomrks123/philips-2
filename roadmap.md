@@ -14,5 +14,6 @@
 - [x] Offer four layouts: Clássico, Roxo, Verde, Colorido, with the choice persisted.
 - [x] Remove the install/download strip from the visible app.
 - [x] Verify menu, layout switching, power, keypad and functions on a phone-sized screen.
+- [x] Replace the favicon and home-screen icons with the colorful star mark.
 - [ ] Publish the app once the user confirms.
 - [ ] Load confirmed IR codes for the TV model (blocked: needs codes captured from the original remote or a trusted table).

@@ -3,7 +3,7 @@ import { Download, Share, PlusSquare, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { usePwaLifecycle } from "@/hooks/use-pwa-lifecycle";
-import appIcon from "@/assets/remote-192.png.asset.json";
+import appIcon from "@/assets/star-192.png.asset.json";
 
 export function PwaLifecycle() {
   const { ready, installed, ios, online, canPrompt, busy, installError, install } = usePwaLifecycle();

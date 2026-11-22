@@ -10,7 +10,7 @@ const LAYOUTS = [
   { id: "colorido", name: "Colorido" },
 ] as const;
 type LayoutId = (typeof LAYOUTS)[number]["id"];
-import appIcon from "@/assets/remote-192.png.asset.json";
+import appIcon from "@/assets/star-192.png.asset.json";
 import {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Star, Power, Plus, Minus,
   Undo2, MoreHorizontal, VolumeX, X, Delete, Check, AlertTriangle, Wifi, Menu as MenuIcon,
