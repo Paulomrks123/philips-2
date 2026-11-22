@@ -172,7 +172,7 @@ function Index() {
                   {LAYOUTS.map((l) => (
                     <button key={l.id} type="button" onClick={() => chooseLayout(l.id)} aria-pressed={layout === l.id}
                       className={`layout-swatch rounded-lg border-2 p-2 text-left text-sm ${layout === l.id ? "border-primary" : "border-transparent"}`} data-layout={l.id}>
-                      <span className="swatch-bar mb-2 flex h-8 items-center justify-center rounded-md"><span className="swatch-dot block size-5 rounded-full" /></span>{l.name}
+                      <span className="swatch-bar mb-2 flex h-8 items-center justify-center gap-1 rounded-md"><span className="swatch-ch block size-3.5 rounded-full" /><span className="swatch-dot block size-5 rounded-full" /></span>{l.name}
                     </button>
                   ))}
                 </div>
