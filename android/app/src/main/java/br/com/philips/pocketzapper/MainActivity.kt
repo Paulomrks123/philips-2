@@ -233,7 +233,7 @@ class MainActivity : Activity() {
                 .put("networkConnected", connected)
                 .put("message", when {
                     available && rc6Carrier != null -> "Emissor infravermelho compatível detectado (" + rc6Carrier + " Hz). Controle IR disponível."
-                    available -> "Este celular tem infravermelho, mas não confirmou suporte a 36 kHz. O aplicativo tentará usar Wi-Fi."
+                    available -> "Este celular tem infravermelho, mas não confirmou suporte a 36 ou 38 kHz. O aplicativo tentará usar Wi-Fi."
                     connected -> "TV acessível pela rede Wi-Fi. Controle automático por Wi-Fi neste aparelho."
                     available.not() -> "Este celular não tem emissor infravermelho. Use o controle pela rede Wi-Fi."
                     else -> "Aguardando conexão com a TV pela rede Wi-Fi."
@@ -352,15 +352,15 @@ class MainActivity : Activity() {
                 }
             }
 
-            return result(false, if (hasIr) "O emissor IR deste celular não suporta 36 kHz. Conecte a TV pela rede Wi-Fi." else "Este celular não possui emissor infravermelho. Conecte a TV pela rede Wi-Fi ou use um transmissor IR externo compatível.")
+            return result(false, if (hasIr) "O emissor IR deste celular não suporta 36 ou 38 kHz. Conecte a TV pela rede Wi-Fi." else "Este celular não possui emissor infravermelho. Conecte a TV pela rede Wi-Fi ou use um transmissor IR externo compatível.")
         }
 
         private fun supportedRc6Carrier(manager: ConsumerIrManager?): Int? {
             val ranges = manager?.carrierFrequencies ?: return null
             val pairs = ranges.toList().chunked(2).filter { it.size == 2 }
             return when {
-                pairs.any { 36000.0 in it[0]..it[1] } -> 36000
-                pairs.any { 38000.0 in it[0]..it[1] } -> 38000
+                pairs.any { 36000 in it[0]..it[1] } -> 36000
+                pairs.any { 38000 in it[0]..it[1] } -> 38000
                 else -> null
             }
         }
