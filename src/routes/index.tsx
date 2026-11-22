@@ -1,10 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+
+const LAYOUTS = [
+  { id: "classic", name: "Clássico" },
+  { id: "roxo", name: "Roxo" },
+  { id: "verde", name: "Verde" },
+  { id: "colorido", name: "Colorido" },
+] as const;
+type LayoutId = (typeof LAYOUTS)[number]["id"];
 import appIcon from "@/assets/remote-192.png.asset.json";
 import {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Star, Power, Plus, Minus,
-  Undo2, MoreHorizontal, VolumeX, X, Delete, Check, AlertTriangle, Wifi, Menu,
+  Undo2, MoreHorizontal, VolumeX, X, Delete, Check, AlertTriangle, Wifi, Menu as MenuIcon,
 } from "lucide-react";
 
 declare global {
@@ -12,20 +21,19 @@ declare global {
     PhilipsIR?: {
       getStatus: () => string;
       send: (command: string) => string;
-      connectNetwork: (ip: string, mac: string) => string;
+      connectNetwork: (ip: string) => string;
     };
   }
 }
 
-type IrStatus = { available: boolean; irAvailable?: boolean; profileConfigured: boolean; supports36kHz?: boolean; networkConnected?: boolean; carrierRangesHz?: number[][]; transport?: "infrared" | "wifi" | "waiting"; manufacturer?: string; deviceModel?: string; profile?: string; protocol?: string; message: string };
+type IrStatus = { available: boolean; profileConfigured: boolean; supports36kHz?: boolean; networkConnected?: boolean; carrierRangesHz?: number[][]; message: string };
 
 const LOCAL_BRIDGE = "http://127.0.0.1:8765";
 
 async function callLocalBridge<T>(path: string, body?: Record<string, string>): Promise<T> {
   const response = await fetch(`${LOCAL_BRIDGE}${path}`, {
     method: body ? "POST" : "GET",
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
+    ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}),
     mode: "cors",
     cache: "no-store",
     signal: AbortSignal.timeout(12000),
@@ -48,26 +56,23 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-function Round({ children, label, size = "md", tone = "default", onClick }: {
-  children: ReactNode; label: string; size?: "md" | "lg"; tone?: "default" | "power" | "star"; onClick: () => void;
+function Round({ children, label, size = "md", role, onClick }: {
+  children: ReactNode; label: string; size?: "md" | "lg"; role?: string; onClick: () => void;
 }) {
   const s = size === "lg" ? "remote-large" : "remote-medium";
-  const t = tone === "power" ? "text-destructive" : tone === "star" ? "text-primary" : "text-foreground/80";
   return (
-    <Button variant="remote" size="remote" aria-label={label} onClick={onClick} className={`remote-btn ${s} ${t}`}>
+    <Button variant="remote" size="remote" aria-label={label} onClick={onClick} className={`remote-btn ${s} ${role ? `role-btn role-${role}` : "text-foreground/80"}`}>
       {children}
     </Button>
   );
 }
 
-function Rocker({ label, onUp, onDown, up, down }: { label: string; onUp: () => void; onDown: () => void; up: ReactNode; down: ReactNode }) {
+function Rocker({ label, tone, onUp, onDown, up, down }: { label: string; tone: "ch" | "vol"; onUp: () => void; onDown: () => void; up: ReactNode; down: ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-2 text-foreground/90">
-      <Button variant="remote" size="remote" aria-label={`${label} +`} onClick={onUp} className="remote-ghost">{up}</Button>
-      <span className="h-px w-6 bg-foreground/50" />
-      <span className="text-base">{label}</span>
-      <span className="h-px w-6 bg-foreground/50" />
-      <Button variant="remote" size="remote" aria-label={`${label} -`} onClick={onDown} className="remote-ghost">{down}</Button>
+    <div className={`rocker rocker-${tone}`}>
+      <Button variant="remote" size="remote" aria-label={`${label} +`} onClick={onUp} className="remote-ghost rocker-up">{up}</Button>
+      <span className="text-base font-semibold">{label}</span>
+      <Button variant="remote" size="remote" aria-label={`${label} -`} onClick={onDown} className="remote-ghost rocker-down">{down}</Button>
     </div>
   );
 }
@@ -76,70 +81,45 @@ function Index() {
   const [last, setLast] = useState<string | null>(null);
   const [pad, setPad] = useState(false);
   const [more, setMore] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [layout, setLayout] = useState<"comfortable" | "compact" | "minimal">(() => {
-    if (typeof window === "undefined") return "comfortable";
-    const saved = window.localStorage.getItem("philips-zapper-layout");
-    return saved === "compact" || saved === "minimal" ? saved : "comfortable";
-  });
   const [digits, setDigits] = useState("");
   const [irStatus, setIrStatus] = useState<IrStatus | null>(null);
-  const [tvIp, setTvIp] = useState(() => typeof window === "undefined" ? "192.168.1.2" : window.localStorage.getItem("philips-zapper-tv-ip") || "192.168.1.2");
-  const [tvMac, setTvMac] = useState(() => typeof window === "undefined" ? "" : window.localStorage.getItem("philips-zapper-tv-mac") || "");
+  const [tvIp, setTvIp] = useState("192.168.1.2");
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [layout, setLayout] = useState<LayoutId>("classic");
 
   useEffect(() => {
-    window.localStorage.setItem("philips-zapper-layout", layout);
-  }, [layout]);
-
-  useEffect(() => {
-    window.localStorage.setItem("philips-zapper-tv-ip", tvIp.trim());
-  }, [tvIp]);
-
-  useEffect(() => {
-    window.localStorage.setItem("philips-zapper-tv-mac", tvMac.trim());
-  }, [tvMac]);
+    const saved = localStorage.getItem("remote-layout");
+    if (saved && LAYOUTS.some((l) => l.id === saved)) setLayout(saved as LayoutId);
+  }, []);
+  const chooseLayout = (id: LayoutId) => { setLayout(id); localStorage.setItem("remote-layout", id); };
 
   useEffect(() => {
     let active = true;
-    let busy = false;
-    const reconnect = async () => {
-      if (!active || busy || document.visibilityState === "hidden") return;
-      busy = true;
+    const readStatus = async () => {
       try {
         const status = window.PhilipsIR
           ? JSON.parse(window.PhilipsIR.getStatus()) as IrStatus
           : await callLocalBridge<IrStatus>("/status");
         if (active) setIrStatus(status);
-        if (active && !status.networkConnected) {
-          const result = window.PhilipsIR
-            ? JSON.parse(window.PhilipsIR.connectNetwork(tvIp, tvMac)) as { ok: boolean; message: string }
-            : await callLocalBridge<{ ok: boolean; message: string }>("/connect", { ip: tvIp, mac: tvMac });
-          if (active && result.ok) setSyncStatus("Conexão restaurada automaticamente. " + result.message);
-        }
       } catch {
         if (active) setIrStatus({
-          available: false, profileConfigured: false, networkConnected: false,
-          message: "Aguardando a ponte Android e a TV na rede local. A reconexão será tentada automaticamente.",
+          available: false,
+          profileConfigured: false,
+          networkConnected: false,
+          message: "Abra o Philips Pocket Zapper auxiliar no Android para ativar a ponte local do PWA.",
         });
-      } finally { busy = false; }
+      }
     };
-    void reconnect();
-    const timer = window.setInterval(() => { void reconnect(); }, 10000);
-    document.addEventListener("visibilitychange", reconnect);
-    return () => {
-      active = false;
-      window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", reconnect);
-    };
-  }, [tvIp, tvMac]);
+    void readStatus();
+    return () => { active = false; };
+  }, []);
 
   const syncTv = async () => {
     setSyncStatus("Procurando a TV na rede local...");
     try {
       const response = window.PhilipsIR
-        ? JSON.parse(window.PhilipsIR.connectNetwork(tvIp, tvMac)) as { ok: boolean; message: string }
-        : await callLocalBridge<{ ok: boolean; message: string }>("/connect", { ip: tvIp, mac: tvMac });
+        ? JSON.parse(window.PhilipsIR.connectNetwork(tvIp)) as { ok: boolean; message: string }
+        : await callLocalBridge<{ ok: boolean; message: string }>("/connect", { ip: tvIp });
       setSyncStatus(response.message);
       if (response.ok) {
         setIrStatus((previous) => ({
@@ -167,47 +147,48 @@ function Index() {
   };
 
   return (
-    <div className={`remote-app layout-${layout} mx-auto flex max-w-md flex-col bg-background`}>
-      <header className="remote-header bg-[image:var(--gradient-header)] px-4 pb-2 text-primary-foreground">
-        <div className="flex items-center justify-between gap-2">
-          <span className="w-9" />
-          <div className="flex items-center justify-center gap-2">
-          <img src={appIcon.url} width={32} height={32} alt="" className="size-8 shrink-0 rounded-md" />
-          <h1 className="text-lg font-semibold">Philips TV 50PUG6654/78</h1>
-          </div>
-          <Button variant="ghost" size="icon" aria-label="Abrir menu" onClick={() => setMenuOpen(true)} className="text-primary-foreground"><Menu /></Button>
-        </div>
-        <div className="mt-2 flex items-center justify-center gap-1 rounded-md bg-background/20 px-2 py-1 text-center text-xs">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {irStatus ? irStatus.message : "Modo web: sem acesso direto ao infravermelho"}
-        </div>
-        <div className="mt-3 flex gap-2">
-          <input
-            aria-label="Endereço IP da TV"
-            value={tvIp}
-            onChange={(event) => setTvIp(event.target.value)}
-            placeholder="IP da TV (192.168.1.2)"
-            inputMode="decimal"
-            className="min-w-0 flex-1 rounded-lg border border-primary-foreground/30 bg-background/15 px-3 py-2 text-sm text-primary-foreground placeholder:text-primary-foreground/65 outline-none focus:ring-2 focus:ring-primary-foreground/50"
-          />
-          <Button variant="secondary" onClick={syncTv} className="shrink-0 gap-2">
-            <Wifi className="h-4 w-4" /> Sincronizar
-          </Button>
-        </div>
-        <div className="mt-2 flex gap-2">
-          <input aria-label="Endereço MAC da TV para ligar em standby" value={tvMac}
-            onChange={(event) => setTvMac(event.target.value)}
-            placeholder="MAC da TV (necessário para ligar em standby)"
-            className="min-w-0 flex-1 rounded-lg border border-primary-foreground/30 bg-background/15 px-3 py-2 text-xs text-primary-foreground placeholder:text-primary-foreground/65 outline-none focus:ring-2 focus:ring-primary-foreground/50" />
-        </div>
-        <p className="mt-1 text-[10px] text-primary-foreground/75">Para ligar a TV em standby pela rede, ative Wake-on-LAN na TV e informe o MAC. Sem isso, a rede SAPHI não garante o despertar.</p>
-        {syncStatus && <p role="status" className="mt-2 text-center text-xs text-primary-foreground">{syncStatus}</p>}
+    <div data-layout={layout} className="remote-app mx-auto flex max-w-md flex-col bg-background">
+      <header className="remote-header flex items-center gap-2 bg-[image:var(--gradient-header)] px-3 pb-2 text-primary-foreground">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="remote" size="remote" aria-label="Abrir menu" className="remote-ghost"><MenuIcon /></Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[85vw] max-w-sm overflow-y-auto">
+            <SheetHeader><SheetTitle>Configurações</SheetTitle></SheetHeader>
+            <div className="mt-4 flex flex-col gap-5 px-4 pb-6">
+              <div className="flex items-start gap-2 rounded-md bg-muted p-3 text-xs">
+                <AlertTriangle className="h-4 w-4 shrink-0" /> {irStatus ? irStatus.message : "Modo web: sem acesso direto ao infravermelho"}
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-semibold">Conectar à TV</span>
+                <input aria-label="Endereço IP da TV" value={tvIp} onChange={(e) => setTvIp(e.target.value)} placeholder="IP da TV (192.168.1.2)" inputMode="decimal"
+                  className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                <Button onClick={syncTv} className="gap-2"><Wifi className="h-4 w-4" /> Sincronizar</Button>
+                {syncStatus && <p role="status" className="text-xs text-muted-foreground">{syncStatus}</p>}
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-semibold">Layout</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {LAYOUTS.map((l) => (
+                    <button key={l.id} type="button" onClick={() => chooseLayout(l.id)} aria-pressed={layout === l.id}
+                      className={`layout-swatch rounded-lg border-2 p-2 text-left text-sm ${layout === l.id ? "border-primary" : "border-transparent"}`} data-layout={l.id}>
+                      <span className="swatch-bar mb-2 flex h-8 items-center justify-center rounded-md"><span className="swatch-dot block size-5 rounded-full" /></span>{l.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+        <img src={appIcon.url} width={24} height={24} alt="" className="size-6 shrink-0 rounded-md" />
+        <h1 className="truncate text-base font-semibold">Philips TV 50PUG6654/78</h1>
       </header>
 
       <main className="remote-main relative flex flex-1 flex-col">
         <div className="remote-top grid grid-cols-3 items-start">
-          <div><Rocker label="CH" onUp={() => press("CHANNEL_UP")} onDown={() => press("CHANNEL_DOWN")} up={<ChevronUp />} down={<ChevronDown />} /></div>
-          <div className="flex justify-center"><Round size="lg" tone="star" label="Favoritos" onClick={() => press("FAVORITES")}><Star className="h-10 w-10 fill-current" /></Round></div>
-          <div className="remote-power flex justify-end"><Round tone="power" label="Power" onClick={() => press("POWER")}><Power className="h-8 w-8" /></Round></div>
+          <div><Rocker label="CH" tone="ch" onUp={() => press("CHANNEL_UP")} onDown={() => press("CHANNEL_DOWN")} up={<ChevronUp />} down={<ChevronDown />} /></div>
+          <div className="flex justify-center"><Round size="lg" role="star" label="Favoritos" onClick={() => press("FAVORITES")}><Star className="h-10 w-10 fill-current" /></Round></div>
+          <div className="remote-power flex justify-end"><Round role="power" label="Power" onClick={() => press("POWER")}><Power className="h-8 w-8" /></Round></div>
         </div>
 
         <div className="remote-navigation grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
@@ -223,19 +204,19 @@ function Index() {
             <Button variant="remote" size="remote" aria-label="OK" onClick={() => press("OK")} className="dpad-ok">OK</Button>
           </div>
           <div className="flex flex-col items-center gap-2">
-            <Rocker label="VOL" onUp={() => press("VOLUME_UP")} onDown={() => press("VOLUME_DOWN")} up={<Plus />} down={<Minus />} />
+            <Rocker label="VOL" tone="vol" onUp={() => press("VOLUME_UP")} onDown={() => press("VOLUME_DOWN")} up={<Plus />} down={<Minus />} />
             <Button variant="remote" size="remote" aria-label="Mute" onClick={() => press("MUTE")} className="remote-ghost"><VolumeX /></Button>
           </div>
         </div>
 
         <div className="remote-menu flex justify-center gap-12">
-          <Round label="Menu" onClick={() => press("MENU")}><span className="text-lg">Menu</span></Round>
-          <Round label="Voltar" onClick={() => press("BACK")}><Undo2 /></Round>
+          <Round role="menu" label="Menu" onClick={() => press("MENU")}><span className="text-lg">Menu</span></Round>
+          <Round role="back" label="Voltar" onClick={() => press("BACK")}><Undo2 /></Round>
         </div>
         <div className="remote-bottom flex justify-between">
-          <Round label="Teclado numérico" onClick={() => setPad(true)}><span className="text-lg">123</span></Round>
-          <Round label="Sair" onClick={() => press("EXIT")}><span className="text-lg">Sair</span></Round>
-          <Round label="Mais opções" onClick={() => setMore(true)}><MoreHorizontal /></Round>
+          <Round role="k123" label="Teclado numérico" onClick={() => setPad(true)}><span className="text-lg">123</span></Round>
+          <Round role="exit" label="Sair" onClick={() => press("EXIT")}><span className="text-lg">Sair</span></Round>
+          <Round role="more" label="Mais opções" onClick={() => setMore(true)}><MoreHorizontal /></Round>
         </div>
 
         <p aria-live="polite" className="remote-feedback text-center text-xs text-muted-foreground">
@@ -243,28 +224,14 @@ function Index() {
         </p>
       </main>
 
-      {(menuOpen || pad || more) && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/70" onClick={() => { setPad(false); setMore(false); setMenuOpen(false); }}>
+      {(pad || more) && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/70" onClick={() => { setPad(false); setMore(false); }}>
           <div className="sheet w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
-              <span className="text-lg font-semibold">{menuOpen ? "Aparência do controle" : pad ? (digits || "Canal") : "Funções"}</span>
-              <Button variant="remote" size="remote" aria-label="Fechar" onClick={() => { setPad(false); setMore(false); setMenuOpen(false); }} className="remote-ghost"><X /></Button>
+              <span className="text-lg font-semibold">{pad ? (digits || "Canal") : "Funções"}</span>
+              <Button variant="remote" size="remote" aria-label="Fechar" onClick={() => { setPad(false); setMore(false); }} className="remote-ghost"><X /></Button>
             </div>
-            {menuOpen ? (
-              <div className="grid grid-cols-1 gap-3">
-                <p className="text-sm text-muted-foreground">Escolha o tamanho dos botões. Sua preferência fica salva neste aparelho.</p>
-                {[
-                  { id: "comfortable", label: "Confortável", detail: "Botões maiores e mais espaço" },
-                  { id: "compact", label: "Compacto", detail: "Controles menores" },
-                  { id: "minimal", label: "Minimalista", detail: "Interface reduzida" },
-                ].map((option) => (
-                  <Button key={option.id} variant={layout === option.id ? "secondary" : "outline"} onClick={() => { setLayout(option.id as typeof layout); setMenuOpen(false); }} className="h-auto justify-between py-3">
-                    <span className="flex flex-col items-start"><span>{option.label}</span><span className="text-xs text-muted-foreground">{option.detail}</span></span>
-                    {layout === option.id && <Check className="h-4 w-4" />}
-                  </Button>
-                ))}
-              </div>
-            ) : pad ? (
+            {pad ? (
               <div className="grid grid-cols-3 gap-3">
                 {["1","2","3","4","5","6","7","8","9"].map((d) => (
                   <Button variant="remote" size="remote" key={d} onClick={() => { setDigits((v) => (v + d).slice(0, 3)); press(`NUM_${d}`); }} className="key">{d}</Button>
