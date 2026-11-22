@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import appIcon from "@/assets/remote-192.png.asset.json";
 import {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Star, Power, Plus, Minus,
-  Undo2, MoreHorizontal, VolumeX, X, Delete, Check, AlertTriangle, Wifi,
+  Undo2, MoreHorizontal, VolumeX, X, Delete, Check, AlertTriangle, Wifi, Menu,
 } from "lucide-react";
 
 declare global {
@@ -76,9 +76,15 @@ function Index() {
   const [last, setLast] = useState<string | null>(null);
   const [pad, setPad] = useState(false);
   const [more, setMore] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [layout, setLayout] = useState<"comfortable" | "compact" | "minimal">(() => {
+    if (typeof window === "undefined") return "comfortable";
+    const saved = window.localStorage.getItem("philips-zapper-layout");
+    return saved === "compact" || saved === "minimal" ? saved : "comfortable";
+  });
   const [digits, setDigits] = useState("");
   const [irStatus, setIrStatus] = useState<IrStatus | null>(null);
-  const [tvIp, setTvIp] = useState("192.168.1.2");
+  const [tvIp, setTvIp] = useState(() => typeof window === "undefined" ? "192.168.1.2" : window.localStorage.getItem("philips-zapper-tv-ip") || "192.168.1.2");
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -135,7 +141,7 @@ function Index() {
   };
 
   return (
-    <div className="remote-app mx-auto flex max-w-md flex-col bg-background">
+    <div className={`remote-app layout-${layout} mx-auto flex max-w-md flex-col bg-background`}>
       <header className="remote-header bg-[image:var(--gradient-header)] px-4 pb-2 text-primary-foreground">
         <div className="flex items-center justify-center gap-2">
           <img src={appIcon.url} width={32} height={32} alt="" className="size-8 shrink-0 rounded-md" />
@@ -200,14 +206,14 @@ function Index() {
         </p>
       </main>
 
-      {(pad || more) && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/70" onClick={() => { setPad(false); setMore(false); }}>
+      {(menuOpen || pad || more) && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/70" onClick={() => { setPad(false); setMore(false); setMenuOpen(false); }}>
           <div className="sheet w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
-              <span className="text-lg font-semibold">{pad ? (digits || "Canal") : "Funções"}</span>
-              <Button variant="remote" size="remote" aria-label="Fechar" onClick={() => { setPad(false); setMore(false); }} className="remote-ghost"><X /></Button>
+              <span className="text-lg font-semibold">{menuOpen ? "Aparência do controle" : pad ? (digits || "Canal") : "Funções"}</span>
+              <Button variant="remote" size="remote" aria-label="Fechar" onClick={() => { setPad(false); setMore(false); setMenuOpen(false); }} className="remote-ghost"><X /></Button>
             </div>
-            {pad ? (
+            {menuOpen ? (\n              <div className="grid grid-cols-1 gap-3">\n                <p className="text-sm text-muted-foreground">Escolha o tamanho dos botões e controles. A preferência fica salva neste aparelho.</p>\n                {[{ id: "comfortable", label: "Confortável", detail: "Botões maiores e mais espaço" }, { id: "compact", label: "Compacto", detail: "Controles menores para caber melhor" }, { id: "minimal", label: "Minimalista", detail: "Interface reduzida e objetiva" }].map((option) => (\n                  <Button key={option.id} variant={layout === option.id ? "secondary" : "outline"} onClick={() => { setLayout(option.id as typeof layout); setMenuOpen(false); }} className="h-auto justify-between py-3">\n                    <span className="flex flex-col items-start"><span>{option.label}</span><span className="text-xs text-muted-foreground">{option.detail}</span></span>\n                    {layout === option.id && <Check className="h-4 w-4" />}\n                  </Button>\n                ))}\n              </div>\n            ) : pad ? (
               <div className="grid grid-cols-3 gap-3">
                 {["1","2","3","4","5","6","7","8","9"].map((d) => (
                   <Button variant="remote" size="remote" key={d} onClick={() => { setDigits((v) => (v + d).slice(0, 3)); press(`NUM_${d}`); }} className="key">{d}</Button>
