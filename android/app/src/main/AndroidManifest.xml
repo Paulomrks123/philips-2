@@ -4,7 +4,9 @@
     <uses-feature android:name="android.hardware.consumerir" android:required="false" />
     <application
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
-        android:label="Philips 2"
+        android:label="Philips Pocket Zapper"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:usesCleartextTraffic="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
