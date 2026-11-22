@@ -1,0 +1,11 @@
+{
+  "model": "Philips 50PUG6654/78",
+  "series": "Philips 6600 series",
+  "smartPlatform": "SAPHI",
+  "infraredReceiver": true,
+  "carrierHz": null,
+  "protocol": null,
+  "verified": false,
+  "commands": {},
+  "note": "Perfil identificado pelo modelo. Frequência, protocolo e códigos de teclas ainda precisam de validação; não transmitir códigos presumidos."
+}
