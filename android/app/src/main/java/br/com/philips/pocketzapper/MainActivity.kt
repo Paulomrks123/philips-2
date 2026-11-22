@@ -85,11 +85,13 @@ class MainActivity : Activity() {
             if (!manager.hasIrEmitter()) return result(false, "Este aparelho não disponibiliza emissor IR pela API Android.")
             val pattern = commands[command.uppercase()]
                 ?: return result(false, "Comando sem código validado para $MODEL.")
-            val carrier = 36000
-            val supportsCarrier = manager.carrierFrequencies?.any { carrier in it.minFrequency..it.maxFrequency } == true
+            val carrierHz = 36000
+            val supportsCarrier = manager.carrierFrequencies?.any {
+                carrierHz.toDouble() >= it.minFrequency && carrierHz.toDouble() <= it.maxFrequency
+            } == true
             if (!supportsCarrier) return result(false, "Frequência de 36 kHz não suportada pelo aparelho.")
             return try {
-                manager.transmit(carrier, pattern)
+                manager.transmit(carrierHz, pattern)
                 result(true, "Sinal transmitido pelo Android; recepção da TV não confirmada.")
             } catch (e: Exception) {
                 result(false, "Falha na transmissão: ${e.message ?: "erro desconhecido"}")
