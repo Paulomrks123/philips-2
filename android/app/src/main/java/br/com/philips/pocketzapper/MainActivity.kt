@@ -201,9 +201,11 @@ class MainActivity : Activity() {
             val carrierRanges = if (available) manager?.carrierFrequencies else null
             val supports36kHz = carrierRanges?.let { ranges ->
                 ranges.toList().chunked(2).any { pair ->
-                    pair.size == 2 && 36000 in pair[0]..pair[1]
+                    pair.size == 2 && 36000.0 in pair[0]..pair[1]
                 }
             } ?: false
+            // Some Android IR blasters expose 38 kHz instead of exactly 36 kHz.
+            val rc6Carrier = supportedRc6Carrier(manager)
             val host = tvHost
             val connected = host != null && probeTv(host)
             if (!connected) tvHost = null
@@ -211,13 +213,15 @@ class MainActivity : Activity() {
                 .put("available", available)
                 .put("irAvailable", available)
                 .put("supports36kHz", supports36kHz)
+                .put("supportsRc6Carrier", rc6Carrier != null)
+                .put("rc6CarrierHz", rc6Carrier ?: 0)
                 .put("carrierRangesHz", org.json.JSONArray().also { array ->
                     carrierRanges?.toList()?.chunked(2)?.forEach { pair ->
                         if (pair.size == 2) array.put(org.json.JSONArray().put(pair[0]).put(pair[1]))
                     }
                 })
                 .put("transport", when {
-                    available && supports36kHz -> "infrared"
+                    available && rc6Carrier != null -> "infrared"
                     connected -> "wifi"
                     else -> "waiting"
                 })
@@ -228,7 +232,7 @@ class MainActivity : Activity() {
                 .put("protocol", "Philips RC6 mode 0 / 36 kHz (perfil atual)")
                 .put("networkConnected", connected)
                 .put("message", when {
-                    available && supports36kHz -> "Emissor infravermelho detectado e compatível com 36 kHz. Controle IR disponível."
+                    available && rc6Carrier != null -> "Emissor infravermelho compatível detectado (" + rc6Carrier + " Hz). Controle IR disponível."
                     available -> "Este celular tem infravermelho, mas não confirmou suporte a 36 kHz. O aplicativo tentará usar Wi-Fi."
                     connected -> "TV acessível pela rede Wi-Fi. Controle automático por Wi-Fi neste aparelho."
                     available.not() -> "Este celular não tem emissor infravermelho. Use o controle pela rede Wi-Fi."
@@ -293,13 +297,9 @@ class MainActivity : Activity() {
             // even when the TV is asleep or the phone has no Wi-Fi route to the TV.
             val manager = ir
             val hasIr = manager?.hasIrEmitter() == true
-            val supports36kHz = if (hasIr) {
-                manager?.carrierFrequencies?.toList()?.chunked(2)?.any { pair ->
-                    pair.size == 2 && 36000 in pair[0]..pair[1]
-                } == true
-            } else false
-            if (hasIr && supports36kHz) {
-                return transmitPhilipsRc6(manager!!, normalized)
+            val rc6Carrier = if (hasIr) supportedRc6Carrier(manager) else null
+            if (hasIr && rc6Carrier != null) {
+                return transmitPhilipsRc6(manager!!, normalized, rc6Carrier)
             }
 
             if (host == null) {
@@ -355,14 +355,24 @@ class MainActivity : Activity() {
             return result(false, if (hasIr) "O emissor IR deste celular não suporta 36 kHz. Conecte a TV pela rede Wi-Fi." else "Este celular não possui emissor infravermelho. Conecte a TV pela rede Wi-Fi ou use um transmissor IR externo compatível.")
         }
 
-        private fun transmitPhilipsRc6(manager: ConsumerIrManager, command: String): String {
+        private fun supportedRc6Carrier(manager: ConsumerIrManager?): Int? {
+            val ranges = manager?.carrierFrequencies ?: return null
+            val pairs = ranges.toList().chunked(2).filter { it.size == 2 }
+            return when {
+                pairs.any { 36000.0 in it[0]..it[1] } -> 36000
+                pairs.any { 38000.0 in it[0]..it[1] } -> 38000
+                else -> null
+            }
+        }
+
+        private fun transmitPhilipsRc6(manager: ConsumerIrManager, command: String, carrierHz: Int): String {
             val code = commands[command]
                 ?: return result(false, "Comando IR ainda não mapeado: $command.")
             return synchronized(this@MainActivity) {
                 try {
                     val currentToggle = rc6Toggle
                     val pattern = buildRc6Mode0(address = 0x00, command = code, toggle = currentToggle)
-                    manager.transmit(36000, pattern)
+                    manager.transmit(carrierHz, pattern)
                     // Advance and persist only after Android accepts the transmission.
                     rc6Toggle = !currentToggle
                     getSharedPreferences("philips_remote", Context.MODE_PRIVATE)
