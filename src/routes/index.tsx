@@ -88,6 +88,14 @@ function Index() {
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
 
   useEffect(() => {
+    window.localStorage.setItem("philips-zapper-layout", layout);
+  }, [layout]);
+
+  useEffect(() => {
+    window.localStorage.setItem("philips-zapper-tv-ip", tvIp);
+  }, [tvIp]);
+
+  useEffect(() => {
     let active = true;
     const readStatus = async () => {
       try {
@@ -105,6 +113,26 @@ function Index() {
       }
     };
     void readStatus();
+    const savedIp = window.localStorage.getItem("philips-zapper-tv-ip");
+    if (savedIp && /^(?:\d{1,3}\.){3}\d{1,3}$/.test(savedIp)) {
+      const reconnect = async () => {
+        try {
+          const result = window.PhilipsIR
+            ? JSON.parse(window.PhilipsIR.connectNetwork(savedIp)) as { ok: boolean; message: string }
+            : await callLocalBridge<{ ok: boolean; message: string }>("/connect", { ip: savedIp });
+          if (active && result.ok) {
+            setSyncStatus(`Reconectado automaticamente: ${result.message}`);
+            setIrStatus((previous) => ({
+              available: previous?.available ?? false,
+              profileConfigured: previous?.profileConfigured ?? false,
+              networkConnected: true,
+              message: "TV conectada pela rede Wi-Fi.",
+            }));
+          }
+        } catch { /* Mantém o IP salvo para uma nova tentativa posterior. */ }
+      };
+      void reconnect();
+    }
     return () => { active = false; };
   }, []);
 
@@ -143,9 +171,13 @@ function Index() {
   return (
     <div className={`remote-app layout-${layout} mx-auto flex max-w-md flex-col bg-background`}>
       <header className="remote-header bg-[image:var(--gradient-header)] px-4 pb-2 text-primary-foreground">
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="w-9" />
+          <div className="flex items-center justify-center gap-2">
           <img src={appIcon.url} width={32} height={32} alt="" className="size-8 shrink-0 rounded-md" />
           <h1 className="text-lg font-semibold">Philips TV 50PUG6654/78</h1>
+          </div>
+          <Button variant="ghost" size="icon" aria-label="Abrir menu" onClick={() => setMenuOpen(true)} className="text-primary-foreground"><Menu /></Button>
         </div>
         <div className="mt-2 flex items-center justify-center gap-1 rounded-md bg-background/20 px-2 py-1 text-center text-xs">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {irStatus ? irStatus.message : "Modo web: sem acesso direto ao infravermelho"}
