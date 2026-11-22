@@ -17,6 +17,8 @@ import java.net.URL
 import java.net.ServerSocket
 import java.net.InetAddress
 import java.net.Socket
+import java.net.DatagramPacket
+import java.net.DatagramSocket
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
@@ -34,6 +36,9 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ir = getSystemService(Context.CONSUMER_IR_SERVICE) as? ConsumerIrManager
+        val saved = getSharedPreferences("philips_remote", Context.MODE_PRIVATE)
+        tvHost = saved.getString("tv_ip", null)
+        tvApiVersion = saved.getInt("tv_api_version", 5)
         startLocalBridgeServer()
 
         webView = WebView(this).apply {
@@ -189,11 +194,18 @@ class MainActivity : Activity() {
         }
 
         @JavascriptInterface
-        fun connectNetwork(ip: String): String {
+        fun connectNetwork(ip: String, mac: String): String {
             val host = ip.trim()
             if (!IPV4.matches(host)) {
                 return result(false, "Digite um endereço IPv4 válido da TV, por exemplo 192.168.1.50.")
             }
+            val cleanMac = mac.trim().uppercase().replace("-", ":")
+            if (cleanMac.isNotEmpty() && !MAC.matches(cleanMac)) {
+                return result(false, "MAC inválido. Use o formato AA:BB:CC:DD:EE:FF.")
+            }
+            val prefs = getSharedPreferences("philips_remote", Context.MODE_PRIVATE)
+            prefs.edit().putString("tv_ip", host).apply()
+            if (cleanMac.isNotEmpty()) prefs.edit().putString("tv_mac", cleanMac).apply()
             val versions = listOf(6, 5, 1)
             for (version in versions) {
                 var connection: HttpURLConnection? = null
@@ -210,6 +222,7 @@ class MainActivity : Activity() {
                         if (json.has("api_version") || json.has("system") || json.has("name")) {
                             tvHost = host
                             tvApiVersion = version
+                            prefs.edit().putInt("tv_api_version", version).apply()
                             return JSONObject()
                                 .put("ok", true)
                                 .put("message", "TV Philips encontrada na rede. API SAPHI v$version respondeu.")
@@ -224,13 +237,38 @@ class MainActivity : Activity() {
                     connection?.disconnect()
                 }
             }
-            return result(false, "Não encontrei a API SAPHI nesse IP. Confira se a TV está ligada, na mesma rede Wi-Fi e se o IP está correto.")
+            tvHost = null
+            return result(false, "TV não respondeu no IP salvo. Confira a rede, o IP e se a TV está ligada; a tentativa será repetida automaticamente.")
         }
 
         @JavascriptInterface
         fun send(command: String): String {
-            val networkKey = networkKey(command.uppercase())
-            val host = tvHost
+            val normalized = command.uppercase()
+            val prefs = getSharedPreferences("philips_remote", Context.MODE_PRIVATE)
+            var host = tvHost
+            if (host == null) {
+                val savedIp = prefs.getString("tv_ip", null)
+                if (!savedIp.isNullOrBlank()) {
+                    try {
+                        val reconnect = JSONObject(connectNetwork(savedIp, prefs.getString("tv_mac", "") ?: ""))
+                        if (reconnect.optBoolean("ok")) host = tvHost
+                    } catch (_: Exception) { }
+                }
+            }
+            if (normalized == "POWER") {
+                val mac = prefs.getString("tv_mac", null)
+                if (host == null) {
+                    return if (!mac.isNullOrBlank()) wakeOnLan(mac, prefs.getString("tv_ip", null))
+                    else result(false, "Para ligar a TV em standby, informe o MAC da TV e ative Wake-on-LAN nas configurações dela.")
+                }
+                val state = readPowerState(host)
+                if (state == "standby" || state == "off") {
+                    return if (!mac.isNullOrBlank()) wakeOnLan(mac, host)
+                    else result(false, "A TV está em standby. Informe o MAC e ative Wake-on-LAN para ligá-la pela rede.")
+                }
+            }
+            val networkKey = networkKey(normalized)
+            host = tvHost
             if (host != null && networkKey != null) {
                 var connection: HttpURLConnection? = null
                 return try {
@@ -268,6 +306,45 @@ class MainActivity : Activity() {
             }
         }
 
+        private fun readPowerState(host: String): String? {
+            var connection: HttpURLConnection? = null
+            return try {
+                connection = URL("http://" + host + ":1925/" + tvApiVersion + "/powerstate").openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 1800
+                connection.readTimeout = 1800
+                if (connection.responseCode !in 200..299) return null
+                val json = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                json.optString("powerstate").lowercase().takeIf { it.isNotBlank() }
+            } catch (_: Exception) { null }
+            finally { connection?.disconnect() }
+        }
+
+        private fun wakeOnLan(macAddress: String, ip: String?): String {
+            val mac = macAddress.trim().uppercase().replace("-", ":")
+            if (!MAC.matches(mac)) return result(false, "MAC inválido. Use AA:BB:CC:DD:EE:FF.")
+            return try {
+                val bytes = mac.split(":").map { it.toInt(16).toByte() }.toByteArray()
+                val packet = ByteArray(6 + 16 * bytes.size)
+                for (i in 0 until 6) packet[i] = 0xFF.toByte()
+                for (i in 0 until 16) System.arraycopy(bytes, 0, packet, 6 + i * bytes.size, bytes.size)
+                DatagramSocket().use { socket ->
+                    socket.broadcast = true
+                    val targets = linkedSetOf("255.255.255.255")
+                    if (!ip.isNullOrBlank() && IPV4.matches(ip)) {
+                        val octets = ip.split(".")
+                        targets.add(octets[0] + "." + octets[1] + "." + octets[2] + ".255")
+                    }
+                    targets.forEach { address ->
+                        socket.send(DatagramPacket(packet, packet.size, InetAddress.getByName(address), 9))
+                    }
+                }
+                result(true, "Pacote Wake-on-LAN enviado. A TV só ligará se Wake-on-LAN/rede em standby estiver habilitado; confirme a tela da TV.")
+            } catch (e: Exception) {
+                result(false, "Não foi possível enviar Wake-on-LAN: " + (e.message ?: "erro de rede") + ".")
+            }
+        }
+
         private fun networkKey(command: String): String? {
             if (command.startsWith("NUM_")) {
                 val digit = command.removePrefix("NUM_")
@@ -302,6 +379,7 @@ class MainActivity : Activity() {
         private const val APP_URL = "https://philips-pocket-zapper.lovable.app"
         private const val APP_HOST = "philips-pocket-zapper.lovable.app"
         private const val MODEL = "Philips 50PUG6654/78"
+        private val MAC = Regex("^(?:[0-9A-F]{2}:){5}[0-9A-F]{2}$")
         private val IPV4 = Regex("^(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)){3}$")
     }
 }
