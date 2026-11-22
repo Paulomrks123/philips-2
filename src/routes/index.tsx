@@ -12,7 +12,7 @@ const LAYOUTS = [
 type LayoutId = (typeof LAYOUTS)[number]["id"];
 import appIcon from "@/assets/star-192.png.asset.json";
 import {
-  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Star, Power, Plus, Minus,
+  ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Power, Plus, Minus,
   Undo2, MoreHorizontal, VolumeX, X, Delete, Check, AlertTriangle, Wifi, Menu as MenuIcon,
 } from "lucide-react";
 
@@ -194,8 +194,8 @@ function Index() {
       <main className="remote-main relative flex flex-1 flex-col">
         <div className="remote-top grid grid-cols-3 items-start">
           <div><Rocker label="CH" tone="ch" onUp={() => press("CHANNEL_UP")} onDown={() => press("CHANNEL_DOWN")} up={<ChevronUp />} down={<ChevronDown />} /></div>
-          <div className="flex justify-center"><Round size="lg" role="star" label="Favoritos" onClick={() => press("FAVORITES")}><Star className="h-10 w-10 fill-current" /></Round></div>
-          <div className="remote-power flex justify-end"><Round role="power" label="Power" onClick={() => press("POWER")}><Power className="h-8 w-8" /></Round></div>
+          <div className="flex justify-center"><Round size="lg" role="power" label="Power" onClick={() => press("POWER")}><Power className="h-10 w-10" /></Round></div>
+          <div aria-hidden="true" />
         </div>
 
         <div className="remote-navigation grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
