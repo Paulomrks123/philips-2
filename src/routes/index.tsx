@@ -1,11 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import appIcon from "@/assets/remote-192.png.asset.json";
 import {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Star, Power, Plus, Minus,
   Undo2, MoreHorizontal, VolumeX, X, Delete, Check, AlertTriangle,
 } from "lucide-react";
+
+declare global {
+  interface Window {
+    PhilipsIR?: {
+      getStatus: () => string;
+      send: (command: string) => string;
+    };
+  }
+}
+
+type IrStatus = { available: boolean; profileConfigured: boolean; message: string };
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -50,9 +61,29 @@ function Index() {
   const [pad, setPad] = useState(false);
   const [more, setMore] = useState(false);
   const [digits, setDigits] = useState("");
+  const [irStatus, setIrStatus] = useState<IrStatus | null>(null);
+
+  useEffect(() => {
+    const readStatus = () => {
+      if (!window.PhilipsIR) return;
+      try { setIrStatus(JSON.parse(window.PhilipsIR.getStatus()) as IrStatus); }
+      catch { setIrStatus({ available: false, profileConfigured: false, message: "Não foi possível consultar o módulo IR." }); }
+    };
+    readStatus();
+  }, []);
+
   const press = (c: string) => {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate?.(15);
-    setLast(c);
+    if (!window.PhilipsIR) {
+      setLast(`${c}: abra a versão Android nativa para acessar o infravermelho; navegador/PWA não transmite IR.`);
+      return;
+    }
+    try {
+      const response = JSON.parse(window.PhilipsIR.send(c)) as { ok: boolean; message: string };
+      setLast(`${c}: ${response.message}`);
+    } catch {
+      setLast(`${c}: erro ao comunicar com o módulo infravermelho.`);
+    }
   };
 
   return (
@@ -63,7 +94,7 @@ function Index() {
           <h1 className="text-lg font-semibold">Philips TV 26PFL3404</h1>
         </div>
         <div className="mt-2 flex items-center justify-center gap-1 rounded-md bg-background/20 px-2 py-1 text-center text-xs">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> Protótipo visual — sem transmissão infravermelha
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {irStatus ? irStatus.message : "Modo web: sem acesso direto ao infravermelho"}
         </div>
       </header>
 
@@ -103,7 +134,7 @@ function Index() {
         </div>
 
         <p aria-live="polite" className="remote-feedback text-center text-xs text-muted-foreground">
-          {last ? `Comando ${last} — não transmitido (sem IR neste ambiente)` : "Nenhum comando transmitido"}
+          {last ?? (irStatus?.available ? "Emissor IR detectado" : "Nenhum comando transmitido") }
         </p>
       </main>
 
