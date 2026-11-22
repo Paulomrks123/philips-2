@@ -11,8 +11,8 @@ android {
         applicationId = "br.com.philips.pocketzapper"
         minSdk = 23
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = providers.gradleProperty("versionCode").orNull?.toInt() ?: 1
+        versionName = "1.0.${providers.gradleProperty("versionCode").orNull ?: "0"}"
     }
 
     // Keep Java and Kotlin bytecode targets aligned for reproducible Android builds.
