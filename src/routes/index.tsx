@@ -245,7 +245,21 @@ function Index() {
               <span className="text-lg font-semibold">{menuOpen ? "Aparência do controle" : pad ? (digits || "Canal") : "Funções"}</span>
               <Button variant="remote" size="remote" aria-label="Fechar" onClick={() => { setPad(false); setMore(false); setMenuOpen(false); }} className="remote-ghost"><X /></Button>
             </div>
-            {menuOpen ? (\n              <div className="grid grid-cols-1 gap-3">\n                <p className="text-sm text-muted-foreground">Escolha o tamanho dos botões e controles. A preferência fica salva neste aparelho.</p>\n                {[{ id: "comfortable", label: "Confortável", detail: "Botões maiores e mais espaço" }, { id: "compact", label: "Compacto", detail: "Controles menores para caber melhor" }, { id: "minimal", label: "Minimalista", detail: "Interface reduzida e objetiva" }].map((option) => (\n                  <Button key={option.id} variant={layout === option.id ? "secondary" : "outline"} onClick={() => { setLayout(option.id as typeof layout); setMenuOpen(false); }} className="h-auto justify-between py-3">\n                    <span className="flex flex-col items-start"><span>{option.label}</span><span className="text-xs text-muted-foreground">{option.detail}</span></span>\n                    {layout === option.id && <Check className="h-4 w-4" />}\n                  </Button>\n                ))}\n              </div>\n            ) : pad ? (
+            {menuOpen ? (
+              <div className="grid grid-cols-1 gap-3">
+                <p className="text-sm text-muted-foreground">Escolha o tamanho dos botões. Sua preferência fica salva neste aparelho.</p>
+                {[
+                  { id: "comfortable", label: "Confortável", detail: "Botões maiores e mais espaço" },
+                  { id: "compact", label: "Compacto", detail: "Controles menores" },
+                  { id: "minimal", label: "Minimalista", detail: "Interface reduzida" },
+                ].map((option) => (
+                  <Button key={option.id} variant={layout === option.id ? "secondary" : "outline"} onClick={() => { setLayout(option.id as typeof layout); setMenuOpen(false); }} className="h-auto justify-between py-3">
+                    <span className="flex flex-col items-start"><span>{option.label}</span><span className="text-xs text-muted-foreground">{option.detail}</span></span>
+                    {layout === option.id && <Check className="h-4 w-4" />}
+                  </Button>
+                ))}
+              </div>
+            ) : pad ? (
               <div className="grid grid-cols-3 gap-3">
                 {["1","2","3","4","5","6","7","8","9"].map((d) => (
                   <Button variant="remote" size="remote" key={d} onClick={() => { setDigits((v) => (v + d).slice(0, 3)); press(`NUM_${d}`); }} className="key">{d}</Button>
