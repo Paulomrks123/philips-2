@@ -17,7 +17,7 @@ declare global {
   }
 }
 
-type IrStatus = { available: boolean; profileConfigured: boolean; supports36kHz?: boolean; networkConnected?: boolean; carrierRangesHz?: number[][]; message: string };
+type IrStatus = { available: boolean; irAvailable?: boolean; profileConfigured: boolean; supports36kHz?: boolean; networkConnected?: boolean; carrierRangesHz?: number[][]; transport?: "infrared" | "wifi" | "waiting"; manufacturer?: string; deviceModel?: string; profile?: string; protocol?: string; message: string };
 
 const LOCAL_BRIDGE = "http://127.0.0.1:8765";
 
