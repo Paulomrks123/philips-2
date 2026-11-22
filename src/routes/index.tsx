@@ -84,13 +84,15 @@ function Index() {
   const [digits, setDigits] = useState("");
   const [irStatus, setIrStatus] = useState<IrStatus | null>(null);
   const [tvIp, setTvIp] = useState("192.168.1.2");
-  const [tvMac, setTvMac] = useState(() => localStorage.getItem("philips-tv-mac") ?? "");
+  const [tvMac, setTvMac] = useState("");
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [layout, setLayout] = useState<LayoutId>("classic");
 
   useEffect(() => {
     const saved = localStorage.getItem("remote-layout");
     if (saved && LAYOUTS.some((l) => l.id === saved)) setLayout(saved as LayoutId);
+    const savedMac = localStorage.getItem("philips-tv-mac");
+    if (savedMac) setTvMac(savedMac);
   }, []);
   const chooseLayout = (id: LayoutId) => { setLayout(id); localStorage.setItem("remote-layout", id); };
 
