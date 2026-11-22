@@ -16,7 +16,7 @@ declare global {
   }
 }
 
-type IrStatus = { available: boolean; profileConfigured: boolean; message: string };
+type IrStatus = { available: boolean; profileConfigured: boolean; supports36kHz?: boolean; carrierRangesHz?: number[][]; message: string };
 
 export const Route = createFileRoute("/")({
   head: () => ({
