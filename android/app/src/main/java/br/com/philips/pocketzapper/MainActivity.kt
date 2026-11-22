@@ -201,7 +201,7 @@ class MainActivity : Activity() {
             val carrierRanges = if (available) manager?.carrierFrequencies else null
             val supports36kHz = carrierRanges?.let { ranges ->
                 ranges.toList().chunked(2).any { pair ->
-                    pair.size == 2 && 36000 in pair[0]..pair[1]
+                    pair.size == 2 && pair[0].toInt() <= 36000 && 36000 <= pair[1].toInt()
                 }
             } ?: false
             // Some Android IR blasters expose 38 kHz instead of exactly 36 kHz.
@@ -359,8 +359,8 @@ class MainActivity : Activity() {
             val ranges = manager?.carrierFrequencies ?: return null
             val pairs = ranges.toList().chunked(2).filter { it.size == 2 }
             return when {
-                pairs.any { 36000.0 in it[0]..it[1] } -> 36000
-                pairs.any { 38000.0 in it[0]..it[1] } -> 38000
+                pairs.any { it[0].toInt() <= 36000 && 36000 <= it[1].toInt() } -> 36000
+                pairs.any { it[0].toInt() <= 38000 && 38000 <= it[1].toInt() } -> 38000
                 else -> null
             }
         }
