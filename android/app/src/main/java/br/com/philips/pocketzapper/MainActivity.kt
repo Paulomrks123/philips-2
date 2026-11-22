@@ -118,7 +118,7 @@ class MainActivity : Activity() {
                     val split = line.indexOf(":")
                     if (split > 0) headers[line.substring(0, split).trim().lowercase()] = line.substring(split + 1).trim()
                 }
-                if (headers["origin"] != "https://philips-pocket-zapper.lovable.app") {
+                if (headers["origin"] != "https://philips-2.lovable.app") {
                     val denied = "HTTP/1.1 403 Forbidden\\r\\nContent-Length: 0\\r\\nConnection: close\\r\\n\\r\\n"
                     client.getOutputStream().use { it.write(denied.toByteArray(StandardCharsets.US_ASCII)) }
                     return
@@ -148,7 +148,7 @@ class MainActivity : Activity() {
                 val bytes = result.toByteArray(StandardCharsets.UTF_8)
                 val output: OutputStream = client.getOutputStream()
                 val responseHeaders = "HTTP/1.1 $status\r\n" +
-                    "Access-Control-Allow-Origin: https://philips-pocket-zapper.lovable.app\r\n" +
+                    "Access-Control-Allow-Origin: https://philips-2.lovable.app\r\n" +
                     "Vary: Origin\r\n" +
                     "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n" +
                     "Access-Control-Allow-Headers: Content-Type\r\n" +
@@ -187,7 +187,7 @@ class MainActivity : Activity() {
         fun connectNetwork(ip: String, mac: String): String {
             val host = ip.trim()
             if (!IPV4.matches(host)) {
-                return result(false, "Digite um endereço IPv4 válido da TV, por exemplo 192.168.1.50.")
+                return result(false, "Digite um endereço IPv4 válido da TV, por exemplo 192.168.1.2.")
             }
             val versions = listOf(6, 5, 1)
             for (version in versions) {
@@ -346,8 +346,8 @@ class MainActivity : Activity() {
     }
 
     companion object {
-        private const val APP_URL = "https://philips-pocket-zapper.lovable.app"
-        private const val APP_HOST = "philips-pocket-zapper.lovable.app"
+        private const val APP_URL = "https://philips-2.lovable.app"
+        private const val APP_HOST = "philips-2.lovable.app"
         private const val MODEL = "Philips 50PUG6654/78"
         private val IPV4 = Regex("^(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1?\\d?\\d)){3}$")
     }
