@@ -2,10 +2,23 @@
   "model": "Philips 50PUG6654/78",
   "series": "Philips 6600 series",
   "smartPlatform": "SAPHI",
+  "defaultIp": "192.168.1.2",
+  "network": {
+    "wifi": "802.11n",
+    "ethernet": true,
+    "saphiRemoteApiPort": 1925,
+    "wakeOnWifi": {
+      "supportedByManual": true,
+      "settingPath": "Início > Definições > Todas as configurações > Sem fio e redes > Ligar com Wi-Fi (WoWLAN)",
+      "mustBeEnabled": true,
+      "standbyWake": true,
+      "requiresMacAddress": true
+    }
+  },
   "infraredReceiver": true,
   "carrierHz": null,
   "protocol": null,
   "verified": false,
   "commands": {},
-  "note": "Perfil identificado pelo modelo. Frequência, protocolo e códigos de teclas ainda precisam de validação; não transmitir códigos presumidos."
+  "note": "WoWLAN está documentado no manual deste modelo. O aplicativo deve enviar pacote mágico somente com MAC válido e a opção WoWLAN ativada na TV. Códigos infravermelhos ainda não foram confirmados; não transmitir códigos presumidos."
 }
