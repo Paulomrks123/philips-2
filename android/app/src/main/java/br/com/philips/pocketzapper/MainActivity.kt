@@ -286,17 +286,8 @@ class MainActivity : Activity() {
             val normalized = command.uppercase()
             val prefs = getSharedPreferences("philips_remote", Context.MODE_PRIVATE)
             var host = tvHost
-            if (host == null) {
-                val savedIp = prefs.getString("tv_ip", null)
-                if (!savedIp.isNullOrBlank()) {
-                    try {
-                        val reconnect = JSONObject(connectNetwork(savedIp, prefs.getString("tv_mac", "") ?: ""))
-                        if (reconnect.optBoolean("ok")) host = tvHost
-                    } catch (_: Exception) { }
-                }
-            }
-            // Use IR first whenever the hardware supports the carrier: this also works
-            // when the TV is in standby and its Wi-Fi API is unavailable.
+            // Use IR before attempting a network reconnect: this is immediate and works
+            // even when the TV is asleep or the phone has no Wi-Fi route to the TV.
             val manager = ir
             val hasIr = manager?.hasIrEmitter() == true
             val supports36kHz = if (hasIr) {
@@ -306,6 +297,16 @@ class MainActivity : Activity() {
             } else false
             if (hasIr && supports36kHz) {
                 return transmitPhilipsRc6(manager!!, normalized)
+            }
+
+            if (host == null) {
+                val savedIp = prefs.getString("tv_ip", null)
+                if (!savedIp.isNullOrBlank()) {
+                    try {
+                        val reconnect = JSONObject(connectNetwork(savedIp, prefs.getString("tv_mac", "") ?: ""))
+                        if (reconnect.optBoolean("ok")) host = tvHost
+                    } catch (_: Exception) { }
+                }
             }
 
             if (normalized == "POWER") {
