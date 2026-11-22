@@ -1,4 +1,4 @@
-name: Android APK
+name: Android debug APK
 
 on:
   workflow_dispatch:
@@ -6,11 +6,7 @@ on:
     paths:
       - "android/**"
       - "src/routes/index.tsx"
-      - "src/styles.css"
       - ".github/workflows/android-apk.yml"
-
-permissions:
-  contents: write
 
 jobs:
   build:
@@ -27,28 +23,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Build versioned APK
-        run: gradle -p android -PversionCode=${{ github.run_number }} assembleDebug
-      - name: Upload APK artifact
+      - name: Build debug APK
+        run: gradle -p android assembleDebug
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: philips-pocket-zapper-v${{ github.run_number }}
+          name: philips-pocket-zapper-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-      - name: Check whether this is the latest main commit
-        id: latest
-        run: |
-          git fetch origin main
-          if [ "$(git rev-parse origin/main)" = "$GITHUB_SHA" ]; then
-            echo "is_latest=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_latest=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Publish APK release
-        if: steps.latest.outputs.is_latest == 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.run_number }}
-          name: Philips Pocket Zapper v${{ github.run_number }}
-          generate_release_notes: true
-          files: android/app/build/outputs/apk/debug/app-debug.apk

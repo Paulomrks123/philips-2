@@ -96,7 +96,7 @@
   --pad: oklch(0.97 0 0);
   --pad-foreground: oklch(0.45 0 0);
   --gradient-header: linear-gradient(90deg, oklch(0.5 0.2 260), oklch(0.62 0.2 250));
-  --shadow-btn: 0 7px 16px oklch(0 0 0 / 48%), 0 2px 4px oklch(0 0 0 / 28%), inset 0 1.5px 0 oklch(1 0 0 / 16%), inset 0 -2px 3px oklch(0 0 0 / 18%);
+  --shadow-btn: 0 6px 14px oklch(0 0 0 / 45%), inset 0 1px 0 oklch(1 0 0 / 6%);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -166,16 +166,16 @@
 @layer components {
   .remote-btn { display:flex; align-items:center; justify-content:center; border-radius:9999px; background:var(--card); box-shadow:var(--shadow-btn); transition:transform .12s, background .12s; }
   .remote-btn:active { transform:scale(.92); background:var(--accent); }
-  .remote-ghost { display:flex; align-items:center; justify-content:center; width:44px; height:44px; padding:.5rem; border:1px solid oklch(1 0 0 / 9%); border-radius:9999px; background:color-mix(in oklab, var(--card) 94%, white 6%); box-shadow:0 4px 9px oklch(0 0 0 / 32%), inset 0 1px 0 oklch(1 1 1 / 12%), inset 0 -1px 2px oklch(0 0 0 / 18%); transition:transform .12s, background .12s, box-shadow .12s; }
-  .remote-ghost:active { transform:scale(.85); background:var(--accent); box-shadow:0 1px 3px oklch(0 0 0 / 35%), inset 0 2px 4px oklch(0 0 0 / 22%); }
+  .remote-ghost { display:flex; align-items:center; justify-content:center; width:44px; height:44px; padding:.5rem; border-radius:9999px; transition:transform .12s, background .12s; }
+  .remote-ghost:active { transform:scale(.85); background:var(--accent); }
   .dpad { position:relative; width:100%; max-width:15rem; aspect-ratio:1; border-radius:9999px; background:var(--pad); color:var(--pad-foreground); box-shadow:var(--shadow-btn); }
-  .dpad-dir { display:flex; align-items:center; justify-content:center; width:34%; height:34%; border:1px solid oklch(0 0 0 / 7%); border-radius:9999px; box-shadow:0 3px 7px oklch(0 0 0 / 16%), inset 0 1px 0 oklch(1 1 1 / 65%); transition:background .12s, box-shadow .12s, transform .12s; }
-  .dpad-dir:active { transform:scale(.94); background:color-mix(in oklab, var(--primary) 25%, transparent); box-shadow:inset 0 2px 4px oklch(0 0 0 / 16%); }
-  .dpad-ok { position:absolute; inset:33%; border:1px solid oklch(0 0 0 / 8%); border-radius:9999px; font-size:1.4rem; box-shadow:0 3px 7px oklch(0 0 0 / 18%), inset 0 1px 0 oklch(1 1 1 / 65%); transition:background .12s, box-shadow .12s, transform .12s; }
-  .dpad-ok:active { transform:scale(.94); background:color-mix(in oklab, var(--primary) 25%, transparent); box-shadow:inset 0 2px 4px oklch(0 0 0 / 18%); }
+  .dpad-dir { display:flex; align-items:center; justify-content:center; width:34%; height:34%; border-radius:9999px; transition:background .12s; }
+  .dpad-dir:active { background:color-mix(in oklab, var(--primary) 25%, transparent); }
+  .dpad-ok { position:absolute; inset:33%; border-radius:9999px; font-size:1.4rem; transition:background .12s; }
+  .dpad-ok:active { background:color-mix(in oklab, var(--primary) 25%, transparent); }
   .sheet { background:var(--card); border-radius:.5rem .5rem 0 0; padding:1.25rem; padding-bottom:max(1.25rem,env(safe-area-inset-bottom)); max-height:90dvh; overflow-y:auto; animation:slide-up .2s ease-out; }
-  .key { height:3.5rem; display:flex; align-items:center; justify-content:center; border:1px solid oklch(1 0 0 / 7%); border-radius:1rem; background:var(--background); font-size:1.25rem; box-shadow:0 4px 8px oklch(0 0 0 / 28%), inset 0 1px 0 oklch(1 1 1 / 8%), inset 0 -1px 2px oklch(0 0 0 / 20%); transition:transform .1s, box-shadow .1s; }
-  .key:active { transform:scale(.94); background:var(--accent); box-shadow:0 1px 3px oklch(0 0 0 / 30%), inset 0 2px 4px oklch(0 0 0 / 20%); }
+  .key { height:3.5rem; display:flex; align-items:center; justify-content:center; border-radius:1rem; background:var(--background); font-size:1.25rem; transition:transform .1s; }
+  .key:active { transform:scale(.94); background:var(--accent); }
 }
 .remote-header { padding-top:max(.75rem,env(safe-area-inset-top)); }
 .remote-btn, .dpad-dir, .dpad-ok { border-radius:9999px; }
@@ -188,7 +188,7 @@
 .remote-btn svg { width:28px; height:28px; }
 .remote-large svg { width:40px; height:40px; }
 .remote-ghost svg, .dpad-dir svg { width:24px; height:24px; }
-.remote-power { padding-top:62px; }
+.remote-power { padding-top:72px; }
 .remote-navigation { margin-top:1rem; }
 .remote-menu { margin-top:1.5rem; }
 .remote-bottom { margin-top:1.25rem; }
@@ -198,7 +198,7 @@
   .remote-main { padding:.75rem 1.25rem .25rem; }
   .remote-large { width:72px; height:72px; }
   .remote-medium { width:52px; height:52px; }
-  .remote-power { padding-top:42px; }
+  .remote-power { padding-top:50px; }
   .remote-navigation { margin-top:.25rem; }
   .dpad { max-width:190px; }
   .remote-menu, .remote-bottom { margin-top:.75rem; }
@@ -209,7 +209,7 @@
   .remote-main { display:grid; grid-template-columns:1fr 1.35fr; gap:.75rem 1.5rem; padding:.75rem max(1.25rem,env(safe-area-inset-right)) .5rem max(1.25rem,env(safe-area-inset-left)); }
   .remote-navigation { grid-column:2; grid-row:1 / 3; margin:0; }
   .remote-top { gap:.5rem; }
-  .remote-power { padding-top:24px; }
+  .remote-power { padding-top:28px; }
   .remote-large { width:64px; height:64px; }
   .remote-medium { width:48px; height:48px; }
   .dpad { max-width:170px; }

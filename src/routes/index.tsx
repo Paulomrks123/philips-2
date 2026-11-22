@@ -155,6 +155,7 @@ function Index() {
   };
 
   const press = async (c: string) => {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate?.(15);
     try {
       const response = window.PhilipsIR
         ? JSON.parse(window.PhilipsIR.send(c)) as { ok: boolean; message: string }
@@ -166,15 +167,7 @@ function Index() {
   };
 
   return (
-    <div
-      className={`remote-app layout-${layout} mx-auto flex max-w-md flex-col bg-background`}
-      onPointerDownCapture={(event) => {
-        const target = event.target;
-        if (target instanceof Element && target.closest("button, [role=\"button\"]")) {
-          if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate?.(18);
-        }
-      }}
-    >
+    <div className={`remote-app layout-${layout} mx-auto flex max-w-md flex-col bg-background`}>
       <header className="remote-header bg-[image:var(--gradient-header)] px-4 pb-2 text-primary-foreground">
         <div className="flex items-center justify-between gap-2">
           <span className="w-9" />

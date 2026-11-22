@@ -8,12 +8,11 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        val buildVersion = providers.gradleProperty("versionCode").orNull ?: "1"
         applicationId = "br.com.philips.pocketzapper"
         minSdk = 23
         targetSdk = 35
-        versionCode = buildVersion.toInt()
-        versionName = "1.0.$buildVersion"
+        versionCode = 1
+        versionName = "1.0.0"
     }
 
     // Keep Java and Kotlin bytecode targets aligned for reproducible Android builds.
