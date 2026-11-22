@@ -201,7 +201,7 @@ class MainActivity : Activity() {
             val carrierRanges = if (available) manager?.carrierFrequencies else null
             val supports36kHz = carrierRanges?.let { ranges ->
                 ranges.toList().chunked(2).any { pair ->
-                    pair.size == 2 && 36000.0 in pair[0]..pair[1]
+                    pair.size == 2 && 36000 in pair[0]..pair[1]
                 }
             } ?: false
             // Some Android IR blasters expose 38 kHz instead of exactly 36 kHz.
@@ -229,7 +229,7 @@ class MainActivity : Activity() {
                 .put("deviceModel", android.os.Build.MODEL)
                 .put("profile", MODEL)
                 .put("profileConfigured", commands.isNotEmpty())
-                .put("protocol", "Philips RC6 mode 0 / 36 kHz (perfil atual)")
+                .put("protocol", "Philips RC6 mode 0 (36 kHz; 38 kHz apenas se suportado pelo emissor)")
                 .put("networkConnected", connected)
                 .put("message", when {
                     available && rc6Carrier != null -> "Emissor infravermelho compatível detectado (" + rc6Carrier + " Hz). Controle IR disponível."
