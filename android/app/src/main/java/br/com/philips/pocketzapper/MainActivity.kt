@@ -51,7 +51,11 @@ class MainActivity : Activity() {
             val pattern = commands[command.uppercase()]
                 ?: return result(false, "Comando sem código validado para Philips 26PFL3404.")
             val carrier = 36000
-            if (carrier !in manager.carrierFrequencies.map { it.minFrequency..it.maxFrequency }.flatten()) {
+            val ranges = manager.carrierFrequencies?.toList()?.chunked(2).orEmpty()
+            val supportsCarrier = ranges.any { range ->
+                range.size == 2 && carrier in range[0]..range[1]
+            }
+            if (!supportsCarrier) {
                 return result(false, "Frequência de 36 kHz não suportada pelo aparelho.")
             }
             return try {
