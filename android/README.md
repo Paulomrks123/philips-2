@@ -3,7 +3,7 @@
 Este módulo é a camada Android nativa necessária para transmitir infravermelho. O site/PWA hospedado no Lovable não tem acesso direto ao emissor IR do Android.
 
 ## Estado de compatibilidade
-- Modelo-alvo: Philips 50PUG6654/78 (série 6600, plataforma SAPHI). IP informado: 192.168.1.2. A TV possui Wi-Fi 802.11n e Ethernet RJ-45; a API de rede SAPHI deve ser testada com a TV ligada. O manual do modelo não confirma Wake-on-WLAN em standby, portanto o pacote mágico não é garantia de ligar a TV.
+- Modelo-alvo: Philips 50PUG6654/78 (série 6600, plataforma SAPHI). IP informado: 192.168.1.2. A TV possui Wi-Fi 802.11n e Ethernet RJ-45; a API de rede SAPHI deve ser testada com a TV ligada. O manual oficial confirma Wake-on-WLAN em standby. Ative na TV: Início > Definições > Todas as configurações > Sem fio e redes > Ligar com Wi-Fi (WoWLAN) > Ligado. O envio do pacote mágico também exige o MAC da TV; o app tenta descobri-lo na rede ao sincronizar com a TV ligada.
 - Hardware IR: detectado em tempo de execução por `ConsumerIrManager`.
 - Perfil IR: **não configurado**. Não inserir códigos presumidos.
 - RC5/RC6: não assumir sem confirmação específica do modelo/controle.
