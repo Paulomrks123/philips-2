@@ -309,3 +309,16 @@
 .reference-left { left:10%; top:66.5%; width:23%; height:17%; }
 .reference-right { left:68%; top:66.5%; width:23%; height:17%; }
 .reference-ok { left:33.5%; top:66.7%; width:34%; height:17%; }
+.iptv-channel-up { left:43%; top:14%; width:16.5%; height:8.5%; border-radius:12px; }
+.iptv-channel-down { left:43%; top:28.5%; width:16.5%; height:9%; border-radius:12px; }
+.iptv-power { left:71%; top:11%; width:21%; height:10.5%; }
+.iptv-exit { left:9.5%; top:27.5%; width:22%; height:9%; }
+.iptv-back { left:13%; top:40%; width:19%; height:9%; }
+.iptv-menu { left:37.5%; top:39.5%; width:21%; height:9.5%; }
+.iptv-volume-up { left:73.5%; top:28%; width:14%; height:6.5%; border-radius:10px; }
+.iptv-volume-down { left:73.5%; top:41.5%; width:14%; height:7.5%; border-radius:10px; }
+.iptv-up { left:34%; top:57.5%; width:32%; height:9%; }
+.iptv-down { left:34%; top:87%; width:32%; height:9%; }
+.iptv-left { left:8%; top:69%; width:23%; height:16%; }
+.iptv-right { left:69%; top:69%; width:23%; height:16%; }
+.iptv-ok { left:30%; top:66%; width:40%; height:19.5%; }

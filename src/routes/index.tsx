@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import referenceLayout from "@/assets/layout-referencia.png.asset.json";
+import iptvLayout from "@/assets/layout-iptv.png.asset.json";
 
 const LAYOUTS = [
   { id: "classic", name: "Clássico" },
@@ -10,6 +11,7 @@ const LAYOUTS = [
   { id: "verde", name: "Verde" },
   { id: "colorido", name: "Colorido" },
   { id: "referencia", name: "Imagem enviada" },
+  { id: "iptv", name: "IPTV" },
 ] as const;
 type LayoutId = (typeof LAYOUTS)[number]["id"];
 import appIcon from "@/assets/star-192.png.asset.json";
@@ -182,7 +184,7 @@ function Index() {
                   {LAYOUTS.map((l) => (
                     <Button variant="remote" size="remote" key={l.id} type="button" onClick={() => chooseLayout(l.id)} aria-pressed={layout === l.id}
                       className={`layout-swatch rounded-lg border-2 p-2 text-left text-sm ${layout === l.id ? "border-primary" : "border-transparent"}`} data-layout={l.id}>
-                      {l.id === "referencia" ? <img src={referenceLayout.url} alt="" className="mb-2 h-16 w-full rounded-md object-contain" /> : <span className="swatch-bar mb-2 flex h-8 items-center justify-center gap-1 rounded-md"><span className="swatch-ch block size-3.5 rounded-full" /><span className="swatch-dot block size-5 rounded-full" /></span>}{l.name}
+                      {l.id === "referencia" || l.id === "iptv" ? <img src={l.id === "iptv" ? iptvLayout.url : referenceLayout.url} alt="" className="mb-2 h-16 w-full rounded-md object-contain" /> : <span className="swatch-bar mb-2 flex h-8 items-center justify-center gap-1 rounded-md"><span className="swatch-ch block size-3.5 rounded-full" /><span className="swatch-dot block size-5 rounded-full" /></span>}{l.name}
                     </Button>
                   ))}
                 </div>
@@ -213,6 +215,26 @@ function Index() {
             <Button variant="remote" size="remote" aria-label="LEFT" className="reference-hit reference-left" onClick={() => press("LEFT")} />
             <Button variant="remote" size="remote" aria-label="RIGHT" className="reference-hit reference-right" onClick={() => press("RIGHT")} />
             <Button variant="remote" size="remote" aria-label="OK" className="reference-hit reference-ok" onClick={() => press("OK")} />
+          </div>
+          <p aria-live="polite" className="sr-only">{last ?? "Nenhum comando transmitido"}</p>
+        </main>
+      ) : layout === "iptv" ? (
+        <main className="reference-main">
+          <div className="reference-surface">
+            <img src={iptvLayout.url} alt="" width={520} height={1037} className="reference-image" />
+            <Button variant="remote" size="remote" aria-label="CH +" className="reference-hit iptv-channel-up" onClick={() => press("CHANNEL_UP")} />
+            <Button variant="remote" size="remote" aria-label="CH -" className="reference-hit iptv-channel-down" onClick={() => press("CHANNEL_DOWN")} />
+            <Button variant="remote" size="remote" aria-label="Power" className="reference-hit iptv-power" onClick={() => press("POWER")} />
+            <Button variant="remote" size="remote" aria-label="Sair" className="reference-hit iptv-exit" onClick={() => press("EXIT")} />
+            <Button variant="remote" size="remote" aria-label="Voltar" className="reference-hit iptv-back" onClick={() => press("BACK")} />
+            <Button variant="remote" size="remote" aria-label="Menu" className="reference-hit iptv-menu" onClick={() => press("MENU")} />
+            <Button variant="remote" size="remote" aria-label="VOL +" className="reference-hit iptv-volume-up" onClick={() => press("VOLUME_UP")} />
+            <Button variant="remote" size="remote" aria-label="VOL -" className="reference-hit iptv-volume-down" onClick={() => press("VOLUME_DOWN")} />
+            <Button variant="remote" size="remote" aria-label="UP" className="reference-hit iptv-up" onClick={() => press("UP")} />
+            <Button variant="remote" size="remote" aria-label="DOWN" className="reference-hit iptv-down" onClick={() => press("DOWN")} />
+            <Button variant="remote" size="remote" aria-label="LEFT" className="reference-hit iptv-left" onClick={() => press("LEFT")} />
+            <Button variant="remote" size="remote" aria-label="RIGHT" className="reference-hit iptv-right" onClick={() => press("RIGHT")} />
+            <Button variant="remote" size="remote" aria-label="OK" className="reference-hit iptv-ok" onClick={() => press("OK")} />
           </div>
           <p aria-live="polite" className="sr-only">{last ?? "Nenhum comando transmitido"}</p>
         </main>
