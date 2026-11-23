@@ -15,5 +15,6 @@
 - [x] Remove the install/download strip from the visible app.
 - [x] Verify menu, layout switching, power, keypad and functions on a phone-sized screen.
 - [x] Replace the favicon and home-screen icons with the colorful star mark.
+- [x] Add and verify the exact uploaded image as an additional interactive layout, preserving existing choices.
 - [ ] Publish the app once the user confirms.
 - [ ] Load confirmed IR codes for the TV model (blocked: needs codes captured from the original remote or a trusted table).
