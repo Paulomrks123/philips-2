@@ -2,6 +2,8 @@ package br.com.philips.pocketzapper
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.hardware.ConsumerIrManager
 import android.net.Uri
 import android.os.Bundle
@@ -167,6 +169,25 @@ class MainActivity : Activity() {
         uri.scheme == "https" && uri.host == APP_HOST
 
     inner class IrBridge {
+        @JavascriptInterface
+        fun openDuplecast(): String {
+            val packageName = "app.duplecast.android"
+            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+            return if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                runOnUiThread {
+                    try { startActivity(launchIntent) } catch (_: Exception) { }
+                }
+                JSONObject().put("ok", true).put("message", "Abrindo Duplecast.").toString()
+            } else {
+                val storeIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName"))
+                runOnUiThread {
+                    try { startActivity(storeIntent) } catch (_: Exception) { }
+                }
+                JSONObject().put("ok", false).put("message", "Duplecast não está instalado. Abrindo a página oficial para instalar.").toString()
+            }
+        }
+
         @JavascriptInterface
         fun getStatus(): String {
             val manager = ir
