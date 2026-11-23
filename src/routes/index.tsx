@@ -215,7 +215,7 @@ function Index() {
           <div className="reference-surface">
             <img src={iptvLayout.url} alt="" width={520} height={1037} className="reference-image" />
             <Button variant="remote" size="remote" aria-label="CH +" className="reference-hit iptv-channel-up" onClick={() => press("CHANNEL_UP")} />
-            <Button variant="remote" size="remote" aria-label="Abrir Duplecast" title="Abrir Duplecast" onClick={openDuplecast} className="reference-hit iptv-duplecast-key"><MonitorPlay className="h-5 w-5" /></Button>
+            <Button variant="remote" size="remote" aria-label="Power" title="Ligar/desligar TV" onClick={() => press("POWER")} className="reference-hit iptv-duplecast-key"><Power className="h-5 w-5" /></Button>
             <Button variant="remote" size="remote" aria-label="CH -" className="reference-hit iptv-channel-down" onClick={() => press("CHANNEL_DOWN")} />
             <Button variant="remote" size="remote" aria-label="Power" className="reference-hit iptv-power" onClick={() => press("POWER")} />
             <Button variant="remote" size="remote" aria-label="Sair" className="reference-hit iptv-exit" onClick={() => press("EXIT")} />
