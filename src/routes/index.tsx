@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import referenceLayout from "@/assets/layout-referencia.png.asset.json";
 import iptvLayout from "@/assets/layout-iptv.png.asset.json";
 
 const LAYOUTS = [
@@ -10,7 +9,6 @@ const LAYOUTS = [
   { id: "roxo", name: "Roxo" },
   { id: "verde", name: "Verde" },
   { id: "colorido", name: "Colorido" },
-  { id: "referencia", name: "Imagem enviada" },
   { id: "iptv", name: "IPTV" },
 ] as const;
 type LayoutId = (typeof LAYOUTS)[number]["id"];
@@ -26,6 +24,7 @@ declare global {
       getStatus: () => string;
       send: (command: string) => string;
       connectNetwork: (ip: string, mac: string) => string;
+      openDuplecast?: () => string;
     };
   }
 }
@@ -90,15 +89,15 @@ function Index() {
   const [tvIp, setTvIp] = useState("192.168.1.2");
   const [tvMac, setTvMac] = useState("");
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
-  const [layout, setLayout] = useState<LayoutId>("referencia");
+  const [layout, setLayout] = useState<LayoutId>("iptv");
 
   useEffect(() => {
-    const saved = localStorage.getItem("remote-layout");
+    const saved = localStorage.getItem("remote-layout-v2");
     if (saved && LAYOUTS.some((l) => l.id === saved)) setLayout(saved as LayoutId);
     const savedMac = localStorage.getItem("philips-tv-mac");
     if (savedMac) setTvMac(savedMac);
   }, []);
-  const chooseLayout = (id: LayoutId) => { setLayout(id); localStorage.setItem("remote-layout", id); };
+  const chooseLayout = (id: LayoutId) => { setLayout(id); localStorage.setItem("remote-layout-v2", id); };
 
   useEffect(() => {
     let active = true;
@@ -143,6 +142,19 @@ function Index() {
     }
   };
 
+  const openDuplecast = () => {
+    try {
+      if (window.PhilipsIR?.openDuplecast) {
+        const result = JSON.parse(window.PhilipsIR.openDuplecast()) as { ok: boolean; message: string };
+        setLast(result.message);
+        return;
+      }
+      window.location.href = "https://play.google.com/store/apps/details?id=app.duplecast.android";
+    } catch {
+      setLast("Não foi possível abrir o Duplecast neste dispositivo.");
+    }
+  };
+
   const press = async (c: string) => {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate?.(15);
     try {
@@ -184,7 +196,7 @@ function Index() {
                   {LAYOUTS.map((l) => (
                     <Button variant="remote" size="remote" key={l.id} type="button" onClick={() => chooseLayout(l.id)} aria-pressed={layout === l.id}
                       className={`layout-swatch rounded-lg border-2 p-2 text-left text-sm ${layout === l.id ? "border-primary" : "border-transparent"}`} data-layout={l.id}>
-                      {l.id === "referencia" || l.id === "iptv" ? <img src={l.id === "iptv" ? iptvLayout.url : referenceLayout.url} alt="" className="mb-2 h-16 w-full rounded-md object-contain" /> : <span className="swatch-bar mb-2 flex h-8 items-center justify-center gap-1 rounded-md"><span className="swatch-ch block size-3.5 rounded-full" /><span className="swatch-dot block size-5 rounded-full" /></span>}{l.name}
+                      {l.id === "iptv" ? <img src={iptvLayout.url} alt="" className="mb-2 h-16 w-full rounded-md object-contain" /> : <span className="swatch-bar mb-2 flex h-8 items-center justify-center gap-1 rounded-md"><span className="swatch-ch block size-3.5 rounded-full" /><span className="swatch-dot block size-5 rounded-full" /></span>}{l.name}
                     </Button>
                   ))}
                 </div>
@@ -196,29 +208,7 @@ function Index() {
         <h1 className="truncate text-base font-semibold">Philips TV 50PUG6654/78</h1>
       </header>
 
-      {layout === "referencia" ? (
-        <main className="reference-main">
-          <div className="reference-surface">
-            <img src={referenceLayout.url} alt="" width={520} height={1037} className="reference-image" />
-            <Button variant="remote" size="remote" aria-label="Teclado numérico" className="reference-hit reference-keypad" onClick={() => setPad(true)} />
-            <Button variant="remote" size="remote" aria-label="Voltar" className="reference-hit reference-back" onClick={() => press("BACK")} />
-            <Button variant="remote" size="remote" aria-label="Sair" className="reference-hit reference-exit" onClick={() => press("EXIT")} />
-            <Button variant="remote" size="remote" aria-label="CH +" className="reference-hit reference-channel-up" onClick={() => press("CHANNEL_UP")} />
-            <Button variant="remote" size="remote" aria-label="CH -" className="reference-hit reference-channel-down" onClick={() => press("CHANNEL_DOWN")} />
-            <Button variant="remote" size="remote" aria-label="Menu" className="reference-hit reference-menu" onClick={() => press("MENU")} />
-            <Button variant="remote" size="remote" aria-label="Power" className="reference-hit reference-power" onClick={() => press("POWER")} />
-            <Button variant="remote" size="remote" aria-label="VOL +" className="reference-hit reference-volume-up" onClick={() => press("VOLUME_UP")} />
-            <Button variant="remote" size="remote" aria-label="VOL -" className="reference-hit reference-volume-down" onClick={() => press("VOLUME_DOWN")} />
-            <Button variant="remote" size="remote" aria-label="Mute" className="reference-hit reference-mute" onClick={() => press("MUTE")} />
-            <Button variant="remote" size="remote" aria-label="UP" className="reference-hit reference-up" onClick={() => press("UP")} />
-            <Button variant="remote" size="remote" aria-label="DOWN" className="reference-hit reference-down" onClick={() => press("DOWN")} />
-            <Button variant="remote" size="remote" aria-label="LEFT" className="reference-hit reference-left" onClick={() => press("LEFT")} />
-            <Button variant="remote" size="remote" aria-label="RIGHT" className="reference-hit reference-right" onClick={() => press("RIGHT")} />
-            <Button variant="remote" size="remote" aria-label="OK" className="reference-hit reference-ok" onClick={() => press("OK")} />
-          </div>
-          <p aria-live="polite" className="sr-only">{last ?? "Nenhum comando transmitido"}</p>
-        </main>
-      ) : layout === "iptv" ? (
+      {layout === "iptv" ? (
         <main className="reference-main">
           <div className="reference-surface">
             <img src={iptvLayout.url} alt="" width={520} height={1037} className="reference-image" />
@@ -236,6 +226,7 @@ function Index() {
             <Button variant="remote" size="remote" aria-label="RIGHT" className="reference-hit iptv-right" onClick={() => press("RIGHT")} />
             <Button variant="remote" size="remote" aria-label="OK" className="reference-hit iptv-ok" onClick={() => press("OK")} />
           </div>
+          <Button variant="remote" size="remote" aria-label="Abrir Duplecast" onClick={openDuplecast} className="iptv-duplecast-launch"><span className="flex items-center gap-2"><span className="text-xl">▶</span><span>Duplecast</span></span></Button>
           <p aria-live="polite" className="sr-only">{last ?? "Nenhum comando transmitido"}</p>
         </main>
       ) : <main className="remote-main relative flex flex-1 flex-col">
