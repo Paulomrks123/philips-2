@@ -213,6 +213,7 @@ function Index() {
           <div className="reference-surface">
             <img src={iptvLayout.url} alt="" width={520} height={1037} className="reference-image" />
             <Button variant="remote" size="remote" aria-label="CH +" className="reference-hit iptv-channel-up" onClick={() => press("CHANNEL_UP")} />
+            <Button variant="remote" size="remote" aria-label="Abrir Duplecast" title="Abrir Duplecast" onClick={openDuplecast} className="reference-hit iptv-duplecast-key"><MonitorPlay className="h-5 w-5" /></Button>
             <Button variant="remote" size="remote" aria-label="CH -" className="reference-hit iptv-channel-down" onClick={() => press("CHANNEL_DOWN")} />
             <Button variant="remote" size="remote" aria-label="Power" className="reference-hit iptv-power" onClick={() => press("POWER")} />
             <Button variant="remote" size="remote" aria-label="Sair" className="reference-hit iptv-exit" onClick={() => press("EXIT")} />
@@ -226,7 +227,6 @@ function Index() {
             <Button variant="remote" size="remote" aria-label="RIGHT" className="reference-hit iptv-right" onClick={() => press("RIGHT")} />
             <Button variant="remote" size="remote" aria-label="OK" className="reference-hit iptv-ok" onClick={() => press("OK")} />
           </div>
-          <Button variant="remote" size="remote" aria-label="Abrir Duplecast" title="Abrir Duplecast" onClick={openDuplecast} className="iptv-duplecast-launch"><span className="flex items-center justify-center"><MonitorPlay className="h-9 w-9" /></span></Button>
           <p aria-live="polite" className="sr-only">{last ?? "Nenhum comando transmitido"}</p>
         </main>
       ) : <main className="remote-main relative flex flex-1 flex-col">
