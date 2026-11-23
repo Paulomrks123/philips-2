@@ -180,11 +180,8 @@ class MainActivity : Activity() {
                 }
                 JSONObject().put("ok", true).put("message", "Abrindo Duplecast.").toString()
             } else {
-                val storeIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName"))
-                runOnUiThread {
-                    try { startActivity(storeIntent) } catch (_: Exception) { }
-                }
-                JSONObject().put("ok", false).put("message", "Duplecast não está instalado. Abrindo a página oficial para instalar.").toString()
+                // Não abrir a Play Store como efeito colateral de um toque no controle.
+                JSONObject().put("ok", false).put("message", "Duplecast não está instalado neste dispositivo.").toString()
             }
         }
 
