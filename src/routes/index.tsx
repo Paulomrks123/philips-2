@@ -142,6 +142,8 @@ function Index() {
     }
   };
 
+  // Duplecast só pode ser aberto pelo botão dedicado. Nunca redirecionar
+  // botões do controle (principalmente Power) para a Play Store.
   const openDuplecast = () => {
     try {
       if (window.PhilipsIR?.openDuplecast) {
@@ -149,7 +151,7 @@ function Index() {
         setLast(result.message);
         return;
       }
-      window.location.href = "https://play.google.com/store/apps/details?id=app.duplecast.android";
+      setLast("Abra o Duplecast pelo aplicativo instalado no Android.");
     } catch {
       setLast("Não foi possível abrir o Duplecast neste dispositivo.");
     }
