@@ -15,7 +15,7 @@ type LayoutId = (typeof LAYOUTS)[number]["id"];
 import appIcon from "@/assets/star-192.png.asset.json";
 import {
   ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Power, Plus, Minus,
-  Undo2, MoreHorizontal, VolumeX, X, Delete, Check, AlertTriangle, Wifi, Menu as MenuIcon,
+  Undo2, MoreHorizontal, VolumeX, X, Delete, Check, AlertTriangle, Wifi, MonitorPlay, Menu as MenuIcon,
 } from "lucide-react";
 
 declare global {
