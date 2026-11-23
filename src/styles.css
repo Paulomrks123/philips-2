@@ -290,7 +290,10 @@
 [data-layout="referencia"] > .remote-header > h1 { display:none; }
 [data-layout="referencia"] > .remote-header > button { position:absolute; left:2%; top:9%; width:14%; height:82%; border-radius:4px; }
 [data-layout="referencia"] > .remote-header > button svg { opacity:0; }
+.reference-main { position:relative; }
 .reference-surface { position:relative; width:100%; aspect-ratio:520 / 1037; }
+.iptv-duplecast-launch { position:absolute; left:50%; top:91.5%; transform:translateX(-50%); z-index:8; min-width:34%; min-height:5.5%; border:1px solid oklch(1 0 0 / 35%); border-radius:12px; background:oklch(0.18 0.02 260 / 92%); color:white; font-weight:700; box-shadow:0 3px 12px oklch(0 0 0 / 55%); }
+.iptv-duplecast-launch:active { transform:translateX(-50%) scale(.96); }
 .reference-image { display:block; width:100%; height:100%; }
 .reference-hit { position:absolute; padding:0; border-radius:50%; background:transparent; }
 .reference-hit:active { background:color-mix(in oklab, var(--foreground) 14%, transparent); }
