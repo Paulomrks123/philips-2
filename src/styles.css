@@ -325,3 +325,13 @@
 .iptv-left { left:8%; top:69%; width:23%; height:16%; }
 .iptv-right { left:69%; top:69%; width:23%; height:16%; }
 .iptv-ok { left:30%; top:66%; width:40%; height:19.5%; }
+
+
+/* Remove o selo visual do construtor Lovable quando ele for injetado na página publicada. */
+lovable-badge,
+#lovable-badge,
+[data-lovable-badge] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
